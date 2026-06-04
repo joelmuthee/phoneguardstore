@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=pgs2">
+<link rel="stylesheet" href="styles.css?v=pgs3">
 </head>
 <body>
 
@@ -88,6 +88,8 @@
         <input id="searchInput" type="search" placeholder="Search cases, chargers, screen protectors…" autocomplete="off">
         <button id="searchClear" class="search-clear" aria-label="Clear search">×</button>
       </div>
+      <div class="filter-drop" id="catPills"></div>
+      <div class="filter-drop" id="sizePills"></div>
       <select id="sortSelect" class="sort-select" aria-label="Sort items">
         <option value="default">Featured order</option>
         <option value="newest">Newest first</option>
@@ -96,8 +98,6 @@
       </select>
     </div>
     <div class="filter-pills filter-pills--branches" id="branchPills" style="margin-top:8px;display:none;"></div>
-    <div class="filter-pills filter-pills--cats" id="catPills" style="margin-top:8px;"></div>
-    <div class="filter-pills filter-pills--sizes" id="sizePills" style="margin-top:8px;"></div>
     <p class="filter-meta" id="filterMeta"></p>
   </div>
 </section>
@@ -250,6 +250,6 @@
   </div>
 </div>
 
-<script src="main.js?v=pgs2"></script>
+<script src="main.js?v=pgs3"></script>
 </body>
 </html>

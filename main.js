@@ -232,37 +232,53 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
   function buildCatPills() {
     const cats = getCategories();
     if (!cats.length) { catPills.innerHTML = ''; return; }
-    catPills.innerHTML = [
-      `<button class="pill pill--cat ${currentCat === 'all' ? 'active' : ''}" data-cat="all">All styles</button>`,
-      ...cats.map(c => `<button class="pill pill--cat ${currentCat === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`)
-    ].join('');
-    catPills.querySelectorAll('.pill--cat').forEach(p => {
-      p.addEventListener('click', () => {
-        catPills.querySelectorAll('.pill--cat').forEach(x => x.classList.remove('active'));
-        p.classList.add('active');
-        currentCat = p.dataset.cat;
-        currentSize = 'all';
-        currentPage = 1;
-        render();
-      });
+    catPills.innerHTML = `<select class="filter-select" id="catSelect" aria-label="Filter by phone type">`
+      + `<option value="all">All phone types</option>`
+      + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')
+      + `</select>`;
+    const sel = document.getElementById('catSelect');
+    sel.value = currentCat;
+    sel.addEventListener('change', () => {
+      currentCat = sel.value;
+      currentSize = 'all';
+      currentPage = 1;
+      render();
     });
+  }
+
+  // Which phone-brand group a device model belongs to (for the size dropdown).
+  function sizeBrandGroup(model) {
+    if (/^iPhone/i.test(model)) return 'iPhone';
+    if (/^Galaxy Tab/i.test(model)) return 'Galaxy Tab';
+    if (/^Galaxy/i.test(model)) return 'Samsung Galaxy';
+    if (/^Pixel/i.test(model)) return 'Google Pixel';
+    if (/^OnePlus/i.test(model)) return 'OnePlus';
+    if (/^Oppo/i.test(model)) return 'Oppo';
+    if (/^iPad/i.test(model)) return 'iPad';
+    if (/^MacBook/i.test(model)) return 'MacBook';
+    return 'Other';
   }
 
   function buildSizePills() {
     const sizes = getAllSizesForFilter();
     if (sizes.length < 2) { sizePills.innerHTML = ''; return; }
-    sizePills.innerHTML = [
-      `<button class="pill pill--size ${currentSize === 'all' ? 'active' : ''}" data-size="all">All sizes</button>`,
-      ...sizes.map(s => `<button class="pill pill--size ${currentSize === s ? 'active' : ''}" data-size="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
-    ].join('');
-    sizePills.querySelectorAll('.pill--size').forEach(p => {
-      p.addEventListener('click', () => {
-        sizePills.querySelectorAll('.pill--size').forEach(x => x.classList.remove('active'));
-        p.classList.add('active');
-        currentSize = p.dataset.size;
-        currentPage = 1;
-        render();
-      });
+    const order = ['iPhone', 'Samsung Galaxy', 'Google Pixel', 'OnePlus', 'Oppo', 'iPad', 'Galaxy Tab', 'MacBook', 'Other'];
+    const groups = {};
+    sizes.forEach(s => { (groups[sizeBrandGroup(s)] = groups[sizeBrandGroup(s)] || []).push(s); });
+    let opts = `<option value="all">All models</option>`;
+    order.forEach(g => {
+      if (!groups[g] || !groups[g].length) return;
+      opts += `<optgroup label="${g}">`
+        + groups[g].map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
+        + `</optgroup>`;
+    });
+    sizePills.innerHTML = `<select class="filter-select" id="sizeSelect" aria-label="Filter by phone model">${opts}</select>`;
+    const sel = document.getElementById('sizeSelect');
+    sel.value = currentSize;
+    sel.addEventListener('change', () => {
+      currentSize = sel.value;
+      currentPage = 1;
+      render();
     });
   }
 

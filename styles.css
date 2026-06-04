@@ -185,6 +185,22 @@ img { max-width: 100%; display: block; }
 }
 .sort-select:focus { outline: none; border-color: var(--gold); }
 
+/* Category + model filter dropdowns (compact, replaces the long pill rows) */
+.filter-drop { flex: 0 1 auto; min-width: 0; }
+.filter-select {
+  width: 100%; max-width: 100%;
+  padding: 10px 34px 10px 14px;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: #fff; color: var(--ink); font-family: inherit; font-size: 14px;
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232b3a4a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 13px center;
+}
+.filter-select:focus { outline: none; border-color: var(--gold); }
+@media (max-width: 600px) {
+  .filter-drop { flex: 1 1 calc(50% - 5px); }  /* two dropdowns share a row on mobile */
+}
+
 /* NEW / Stock urgency / Heart badges */
 .badge-new {
   position: absolute; top: 14px; left: 14px;
