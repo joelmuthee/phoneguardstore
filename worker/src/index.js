@@ -196,6 +196,44 @@ function categoryFromHashtags(caption) {
   return null;
 }
 
+// Parse exact device models from the shop's model hashtags (#iphone17promaxcase,
+// #samsungs24ultracase, #googlepixel10case, #oneplus15rcase, #ipada16case, ...).
+// Most reliable "size" signal, so these win over the free-text parser below.
+function modelsFromHashtags(caption) {
+  const tags = (String(caption || "").toLowerCase().match(/#[a-z0-9_]+/g) || []).map(t => t.slice(1));
+  const out = [];
+  const add = m => { if (m && !out.includes(m)) out.push(m); };
+  for (const t of tags) {
+    if (/buds|watt|charger|cable|madaraka|happy|eid|lanyard|popsocket/.test(t) && !t.includes("case")) continue;
+    let m;
+    if ((m = t.match(/^iphone(\d{1,2})(e)?(promax|pro|plus|max|mini)?/)) && m[1]) {
+      const v = { promax: " Pro Max", pro: " Pro", plus: " Plus", max: " Max", mini: " Mini" }[m[3]] || "";
+      add(`iPhone ${m[1]}${m[2] ? "e" : ""}${v}`); continue;
+    }
+    if ((m = t.match(/^(?:samsung|galaxy)?s(\d{2})(ultra|plus|fe)?/)) && /samsung|galaxy/.test(t) && m[1]) {
+      const v = { ultra: " Ultra", plus: " Plus", fe: " FE" }[m[2]] || "";
+      add(`Galaxy S${m[1]}${v}`); continue;
+    }
+    if ((m = t.match(/^(?:samsung|galaxy)a(\d{2})/))) { add(`Galaxy A${m[1]}`); continue; }
+    if ((m = t.match(/^samsungnote(\d{1,2})(ultra|plus)?/))) { const v = { ultra: " Ultra", plus: " Plus" }[m[2]] || ""; add(`Galaxy Note ${m[1]}${v}`); continue; }
+    if ((m = t.match(/^samsung(?:galaxy)?fold(\d)/))) { add(`Galaxy Z Fold ${m[1]}`); continue; }
+    if ((m = t.match(/^samsung(?:galaxy)?flip(\d)/))) { add(`Galaxy Z Flip ${m[1]}`); continue; }
+    if ((m = t.match(/^samsungtabs(\d{1,2})(fe|ultra|plus)?/))) { const v = { fe: " FE", ultra: " Ultra", plus: " Plus" }[m[2]] || ""; add(`Galaxy Tab S${m[1]}${v}`); continue; }
+    if ((m = t.match(/^(?:google)?pixel(\d{1,2})(a)?(proxl|pro|xl)?/)) && m[1]) {
+      const v = { proxl: " Pro XL", pro: " Pro", xl: " XL" }[m[3]] || "";
+      add(`Pixel ${m[1]}${m[2] ? "a" : ""}${v}`); continue;
+    }
+    if ((m = t.match(/^oneplus(\d{1,2})(r)?/))) { add(`OnePlus ${m[1]}${m[2] ? "R" : ""}`); continue; }
+    if ((m = t.match(/^oppofindx(\d+)(pro)?/))) { add(`Oppo Find X${m[1]}${m[2] ? " Pro" : ""}`); continue; }
+    if ((m = t.match(/^ipadair(\d{1,2})?/))) { add("iPad Air" + (m[1] ? ` ${m[1]}"` : "")); continue; }
+    if ((m = t.match(/^ipadpro(\d{1,2})?/))) { add("iPad Pro" + (m[1] ? ` ${m[1]}"` : "")); continue; }
+    if ((m = t.match(/^ipada(\d{2})/))) { add(`iPad A${m[1]}`); continue; }
+    if ((m = t.match(/^macbookair(\d{2})/))) { add(`MacBook Air ${m[1]}"`); continue; }
+    if ((m = t.match(/^macbookpro(\d{2})/))) { add(`MacBook Pro ${m[1]}"`); continue; }
+  }
+  return out;
+}
+
 // Phone Guard Store is NEW-STOCK. The "size" dimension is the device MODEL a
 // case fits (iPhone 15 Pro Max, Galaxy S24, iPad Air, etc.). Default qty=1 per
 // detected model; owner adjusts in admin. Universal-fit items (chargers, cables,
@@ -216,7 +254,10 @@ function parseCaptionForBag(caption) {
   }
 
   const stock = {};
-  for (const model of parseDeviceModels(text)) stock[model] = 1;
+  // Prefer exact models from the model hashtags; fall back to the free-text parser.
+  const hashModels = modelsFromHashtags(caption);
+  const models = hashModels.length ? hashModels : parseDeviceModels(text);
+  for (const model of models) stock[model] = 1;
 
   // Default to One Size only if no model matched. Owner edits in admin.
   if (!Object.keys(stock).length) stock["One Size"] = 1;
@@ -714,6 +755,23 @@ export default {
       await env.BAGS.put(`img:${name}`, base64);
       await env.BAGS.put(`mime:${name}`, mime);
       return json({ path: `/img/${name}`, name });
+    }
+
+    // Admin: score a candidate cover frame 0-100 for "case back, flat, large,
+    // centred, clearly visible" — used to pick the best reel frame as a cover.
+    if (request.method === "POST" && path === "/api/score-cover") {
+      if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      if (!body.base64) return json({ error: "base64 required" }, 400);
+      try {
+        const bytes = b64ToBytes(body.base64);
+        const prompt = `You are picking a product cover photo for a phone/tablet CASE shop. Rate this image from 0 to 100. HIGH (80-100): the case or cover is shown with its FLAT BACK facing the camera, large, centred and clearly visible, well lit. MEDIUM (40-70): case visible but small, slightly angled, or some clutter. LOW (0-30): the case is edge-on / side-on (a thin sliver), tiny, blurry, motion-blurred, mostly a hand, or mostly background shelves of other cases. Reply with ONLY the number, nothing else.`;
+        const r = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", { image: [...bytes], prompt, max_tokens: 10, temperature: 0 });
+        const txt = typeof r?.response === "string" ? r.response : JSON.stringify(r?.response ?? r);
+        const m = String(txt).match(/\d{1,3}/);
+        const score = m ? Math.min(100, parseInt(m[0], 10)) : 0;
+        return json({ score });
+      } catch (e) { return json({ score: 0, error: e.message }); }
     }
 
     // ---- IG quick-add: server-side fetch of an Instagram public post ----
