@@ -375,7 +375,7 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
             <a class="btn-card primary${soldOut ? ' soldout' : ''}" href="${whatsappLink(item, soldOut)}" target="_blank" rel="noopener">
               ${WA_SVG} ${soldOut ? 'Sold out · notify me' : 'Check availability'}
             </a>
-            ${item.instagramUrl ? `<a class="btn-card ig" href="${item.instagramUrl}" target="_blank" rel="noopener" aria-label="360 view">${IG_SVG} 360 view</a>` : ''}
+            ${item.instagramUrl ? `<a class="btn-card ig" href="${item.instagramUrl}" target="_blank" rel="noopener" aria-label="360 degree view">${IG_SVG} 360° view</a>` : ''}
           </div>
         </div>
       </article>`;
