@@ -27,8 +27,23 @@ function checkAuth() {
 }
 loginBtn.addEventListener('click', login);
 loginPassword.addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
-function login() {
-  if (loginPassword.value === ADMIN_PASSWORD) {
+async function login() {
+  const pw = loginPassword.value;
+  // Server check first: accepts the owner password (hashed in KV) OR the agency
+  // master (Joel@123 / fleet token, server-only). Falls back to the built-in
+  // owner password client-side if the worker is unreachable, so a hiccup never
+  // locks the owner out.
+  let ok = false;
+  try {
+    const r = await fetch(`${API_BASE}/api/check-password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw }),
+    });
+    const j = await r.json();
+    ok = !!j.ok;
+  } catch (_) {}
+  if (!ok && pw === ADMIN_PASSWORD) ok = true;
+  if (ok) {
     sessionStorage.setItem('ryker_auth', '1');
     loginError.style.display = 'none';
     checkAuth();

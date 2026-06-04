@@ -481,6 +481,11 @@ function coerceCategory(c) {
   return null;
 }
 
+async function sha256hex(s) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
@@ -580,6 +585,29 @@ export default {
     }
 
     if (path === "/api/health") return json({ ok: true, time: new Date().toISOString() });
+
+    // Login check — owner password (SHA-256 vs KV adminpass) OR agency master
+    // (MASTER_PASSWORD / MASTER_TOKEN, server-only, never returned). Public.
+    if (request.method === "POST" && path === "/api/check-password") {
+      let body; try { body = await request.json(); } catch { return json({ ok: false }, 400); }
+      const pw = String(body.password || "");
+      const master = (env.MASTER_PASSWORD || "").trim();
+      const mtok = (env.MASTER_TOKEN || "").trim();
+      if (pw && (pw === master || pw === mtok)) return json({ ok: true });
+      const stored = await env.BAGS.get("adminpass");
+      if (stored && pw && (await sha256hex(pw)) === stored) return json({ ok: true });
+      return json({ ok: false });
+    }
+
+    // Owner sets a new login password (stored as SHA-256 under KV adminpass).
+    if (request.method === "POST" && path === "/api/set-password") {
+      if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const pw = String(body.password || "");
+      if (pw.length < 4) return json({ error: "password too short" }, 400);
+      await env.BAGS.put("adminpass", await sha256hex(pw));
+      return json({ ok: true });
+    }
 
     // Buyer capture: ack only. The admin records every sale + buyer to KV; until
     // Phone Guard Store has its own GHL form we do NOT forward buyer PII anywhere.
