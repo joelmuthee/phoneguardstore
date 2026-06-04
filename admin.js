@@ -2304,7 +2304,7 @@ function posReceiptText(s) {
     `*Phone Guard Store* receipt`,
     `${s.name} (Size ${s.size}) x${s.qty}`,
     `Total: ${fmtKsh(total)}. Paid by ${s.paymentMethod === 'mpesa' ? 'M-Pesa' : 'Cash'}.`,
-    `Thank you for shopping with us. Legend Valley Business Park, Gitanga Road, Nairobi.`,
+    `Thank you for shopping with us. Iconic Business Plaza, Moi Avenue, Nairobi.`,
   ].join('\n');
 }
 
@@ -2330,7 +2330,7 @@ function posPrintReceipt() {
   document.getElementById('posReceiptPrint').innerHTML = `
     <div class="rcpt">
       <div class="rcpt-head">Phone Guard Store</div>
-      <div class="rcpt-sub">Legend Valley Business Park, Gitanga Road, Nairobi<br>0714 672 436</div>
+      <div class="rcpt-sub">Iconic Business Plaza, Moi Avenue, Nairobi<br>0112 440060</div>
       <hr>
       <div class="rcpt-row"><span>${escapeHtml(s.name)}</span></div>
       <div class="rcpt-row"><span>Size ${escapeHtml(s.size)} · ${s.qty} × ${fmtKsh(s.amount)}</span><span>${fmtKsh(total)}</span></div>

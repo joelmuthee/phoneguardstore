@@ -178,7 +178,7 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
   }
 
   function whatsappLink(item, soldOut, selectedSize) {
-    const phone = settings.whatsappNumber || '254714672436';
+    const phone = settings.whatsappNumber || '254112440060';
     const body = enquireBody(item, soldOut, selectedSize);
     // Append the item's /p/<id> share page — WhatsApp previews it as a card with the
     // product photo + name + price. Still opens straight to WhatsApp (no app picker).
@@ -671,7 +671,7 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
     e.preventDefault();
     const items_saved = items.filter(i => wishlist.has(i.id));
     if (!items_saved.length) return;
-    const phone = settings.whatsappNumber || '254714672436';
+    const phone = settings.whatsappNumber || '254112440060';
     const lines = items_saved.map((i, idx) => `${idx + 1}. *${i.name}*${i.price > 0 ? ' (' + fmtPrice(i.price) + ')' : ''}`);
     const msg = `Hi Phone Guard Store! I'd like to check availability of these saved items:\n\n${lines.join('\n')}\n\nAre they available?`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
