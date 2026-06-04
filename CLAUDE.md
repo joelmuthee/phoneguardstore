@@ -24,9 +24,17 @@ not "helpfully" revert.
    the public size filter builds model chips from them. "One Size" = universal-fit
    (chargers, cables) and is hidden from public chips. The admin stock grid is
    device-model presets + "+ Add custom size" for any other model.
-3. **Categories (allowed set):** Phone Cases, iPad Cases, Tablet Cases,
-   MacBook Cases, Screen Protectors, Accessories. `coerceCategory()` maps anything
-   else into these; never publish a category outside the set.
+3. **Categories come from the post's hashtags** (every IG post tags the device
+   family: `#iphonecase`, `#samsungcase`, `#googlepixelcase`, `#ipadcase`, …).
+   `categoryFromHashtags()` in the worker is the authoritative signal and
+   overrides the keyword/AI guess in parseCaptionForBag + discover + ingest.
+   **Allowed set:** iPhone Cases, Samsung Cases, Google Pixel Cases, OnePlus
+   Cases, Phone Cases (other), iPad Cases, Tablet Cases, MacBook Cases, Screen
+   Protectors, Accessories. `coerceCategory()` maps anything else into these.
+   (The 128 already-seeded items were back-filled from the hashtag map by the
+   one-off `PGS-category-backfill` scheduled task after the KV write quota reset —
+   needed because seeding had exhausted the 1,000/day KV writes; code path is live
+   for all future syncs.)
 4. **Primary CTA label = "Check availability"** (WA body: "I'd like to check
    availability of *<Item>*"). Sold-out = "Sold out · notify me". Both keep the
    WhatsApp glyph (owner requirement: WA icon on every button incl. sold-out).

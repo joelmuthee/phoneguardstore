@@ -2078,7 +2078,7 @@ adminItemSearchInput?.addEventListener('input', () => {
 // subset. Dedupe is server-side by `ig_<shortcode>` so the button is
 // idempotent and never re-adds an item already in the catalog.
 const IG_USER_ID = '13528649848';
-const STORE_CATEGORIES = ['Phone Cases', 'iPad Cases', 'Tablet Cases', 'MacBook Cases', 'Screen Protectors', 'Accessories'];
+const STORE_CATEGORIES = ['iPhone Cases', 'Samsung Cases', 'Google Pixel Cases', 'OnePlus Cases', 'Phone Cases', 'iPad Cases', 'Tablet Cases', 'MacBook Cases', 'Screen Protectors', 'Accessories'];
 
 let igSyncCandidates = [];
 

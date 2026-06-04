@@ -176,6 +176,26 @@ function parseDeviceModels(caption) {
   return models;
 }
 
+// The shop tags every post with category hashtags that name the device family
+// (#iphonecase, #samsungcase, #googlepixelcase, #ipadcase, etc.). Those are the
+// most reliable category signal, so they win over the keyword/AI guess. Returns
+// one of the allowed categories, or null when no category hashtag is present.
+function categoryFromHashtags(caption) {
+  const tags = (String(caption || "").toLowerCase().match(/#[a-z0-9_]+/g) || []);
+  const has = (...subs) => subs.some(s => tags.some(t => t.includes(s)));
+  if (has("ipad")) return "iPad Cases";
+  if (has("macbook", "laptopcase")) return "MacBook Cases";
+  if (has("tabletcase", "galaxytab")) return "Tablet Cases";
+  if (has("screenprotector", "temperedglass", "screenguard", "privacyglass")) return "Screen Protectors";
+  if (has("iphone")) return "iPhone Cases";
+  if (has("samsung", "galaxy")) return "Samsung Cases";
+  if (has("googlepixel", "pixel")) return "Google Pixel Cases";
+  if (has("oneplus")) return "OnePlus Cases";
+  if (has("phoneaccessor", "charger", "cable", "powerbank", "earbud", "airpod", "holder")) return "Accessories";
+  if (has("phonecase", "case", "cover", "magsafe", "silicone", "clearcase", "leather")) return "Phone Cases";
+  return null;
+}
+
 // Phone Guard Store is NEW-STOCK. The "size" dimension is the device MODEL a
 // case fits (iPhone 15 Pro Max, Galaxy S24, iPad Air, etc.). Default qty=1 per
 // detected model; owner adjusts in admin. Universal-fit items (chargers, cables,
@@ -187,6 +207,9 @@ function parseCaptionForBag(caption) {
   // with a phone number block that has noise like "0712...".
   const cleaned = text.split(/whatsapp|whastup|wa\.me|0\d{8,}/i)[0].trim().replace(/[.\s]+$/, "");
   let [brand, category] = deriveBrand(caption);
+  // Category hashtags are the authoritative signal — override the keyword guess.
+  const tagCat = categoryFromHashtags(caption);
+  if (tagCat) category = tagCat;
   if (!brand) {
     const first = cleaned.split(/\.\.|\.\s|,|\n/)[0].trim();
     brand = first ? first.slice(0, 60).replace(/\b\w/g, c => c.toUpperCase()) : "New Item";
@@ -460,6 +483,7 @@ Caption: """${trimmed}"""`;
 // Phone Guard Store stocks cases + accessories only. Coerce any AI-suggested
 // category that's outside the allowed list to the closest legal option or null.
 const STORE_CATEGORIES = new Set([
+  "iPhone Cases","Samsung Cases","Google Pixel Cases","OnePlus Cases",
   "Phone Cases","iPad Cases","Tablet Cases","MacBook Cases",
   "Screen Protectors","Accessories",
 ]);
@@ -470,11 +494,15 @@ function coerceCategory(c) {
   const lower = raw.toLowerCase();
   // Apparel / footwear / bag categories don't exist here
   if (/^(tshirts?|shirts?|polos?|jeans?|shorts?|joggers?|tracksuits?|hoodies?|jackets?|suits?|shoes?|sneakers?|boots?|caps?|bags?|handbags?)$/i.test(lower)) return null;
-  // Spelling / phrasing variants -> allowed set
+  // Spelling / phrasing variants -> allowed set (device-specific first)
   if (/(macbook|laptop)/i.test(lower)) return "MacBook Cases";
   if (/ipad/i.test(lower)) return "iPad Cases";
   if (/tablet|galaxy tab/i.test(lower)) return "Tablet Cases";
   if (/(screen|tempered|glass|protector)/i.test(lower)) return "Screen Protectors";
+  if (/iphone/i.test(lower)) return "iPhone Cases";
+  if (/samsung|galaxy/i.test(lower)) return "Samsung Cases";
+  if (/(google|pixel)/i.test(lower)) return "Google Pixel Cases";
+  if (/oneplus/i.test(lower)) return "OnePlus Cases";
   if (/(charger|cable|adapter|power\s?bank|earbud|earphone|airpod|holder|stand|popsocket|ring|lanyard|airtag|accessor)/i.test(lower)) return "Accessories";
   if (/(phone|case|cover|pouch|bumper|wallet|flip)/i.test(lower)) return "Phone Cases";
   // Don't invent -- return null so the owner picks
@@ -944,6 +972,9 @@ export default {
             const c = coerceCategory(text.category);
             if (c) category = c;
           }
+          // Category hashtags are authoritative — they override the AI guess.
+          const tagCat = categoryFromHashtags(it.caption);
+          if (tagCat) category = tagCat;
           if (!category) category = "Accessories"; // safest default if all signals failed
 
           const reason = visionOk ? vision.reason : (text?.reason || (heuristic ? "matched product heuristic" : ""));
@@ -1023,6 +1054,8 @@ export default {
         let category = coerceCategory(h.category);
         if (visionOk && vision.category) { const c = coerceCategory(vision.category); if (c) category = c; }
         else if (text?.category) { const c = coerceCategory(text.category); if (c) category = c; }
+        const tagCat = categoryFromHashtags(it.caption);
+        if (tagCat) category = tagCat;
         if (!category) category = "Accessories";
 
         const urls = (it.imageUrls || []).slice(0, 4);
