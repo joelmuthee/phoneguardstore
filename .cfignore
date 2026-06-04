@@ -1,0 +1,5 @@
+.claude
+.wrangler
+worker
+.tmp*
+node_modules

@@ -1,0 +1,18 @@
+name = "phoneguardstore-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+account_id = "58685495706b973821d77208248c66fc"
+
+[[kv_namespaces]]
+binding = "BAGS"
+id = "8b4e846a2736409a82ac75989abd9904"
+
+# Workers AI — Llama 3.1 8B (text) + Llama 3.2 11B Vision for IG bulk-sync
+# classification. Free tier: 10k requests/day, comfortable for daily syncs.
+[ai]
+binding = "AI"
+
+# Auth tokens set as secrets — never committed:
+#   npx wrangler secret put ADMIN_TOKEN
+#   npx wrangler secret put MASTER_TOKEN
+#   npx wrangler secret put MASTER_PASSWORD

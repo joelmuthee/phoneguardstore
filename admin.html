@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  /* Domain migration: bounce the retired subdomain to rykerluxury.co.ke. */
+  (function () {
+    if (location.hostname === 'XXX_DISABLED_REDIRECT_XXX') {
+      location.replace('https://phoneguardstore.essenceautomations.com' + location.pathname + location.search + location.hash);
+    }
+  })();
+</script>
+<title>Phone Guard Store · Admin</title>
+<link rel="icon" type="image/jpeg" sizes="192x192" href="images/favicon-192.jpg">
+<link rel="apple-touch-icon" sizes="180x180" href="images/logo.jpg">
+<meta name="theme-color" content="#0d1b2a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20260602pos3">
+<script src="https://www.google.com/recaptcha/enterprise.js?render=6LeDBFwpAAAAAJe8ux9-imrqZ2ueRsEtdiWoDDpX" async defer></script>
+</head>
+<body style="background:#f8f6f2;">
+
+<!-- LOGIN -->
+<div id="loginScreen" class="login-wrap">
+  <h1>Phone Guard Store Admin</h1>
+  <p>Enter your admin password</p>
+  <div class="field">
+    <label>Password</label>
+    <input id="loginPassword" type="password" autocomplete="current-password">
+  </div>
+  <button class="btn-admin primary" id="loginBtn" style="width:100%">Sign in</button>
+  <p id="loginError" style="color:#b00020;font-size:13px;text-align:center;margin-top:12px;display:none;">Wrong password</p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="admin-wrap" style="display:none;">
+
+  <div class="admin-header">
+    <h1>Phone Guard Store Admin</h1>
+    <div class="admin-actions">
+      <a class="btn-admin" href="index.html" target="_blank">View store →</a>
+      <button class="btn-admin danger" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <!-- ====== IG BULK SYNC ====== -->
+  <section class="ig-sync-banner" id="igSyncDash">
+    <div class="ig-sync-banner-head">
+      <div class="ig-sync-banner-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+        </svg>
+      </div>
+      <div class="ig-sync-banner-text">
+        <h2>⚡ Add new stock from Instagram</h2>
+        <p>Pulls fresh posts from <strong>@phoneguardstorekenya</strong>. AI filters out non-product posts and suggests a name, category and the device model each one fits. You review and pick what goes live. Picks up exactly where the last sync stopped, never re-adds an item already in your catalog.</p>
+      </div>
+      <button class="ig-sync-cta" id="igSyncCheckBtn" type="button">
+        <span>Check for new posts</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+      </button>
+    </div>
+    <div id="igSyncStatus" class="ig-sync-banner-status"></div>
+    <div id="igSyncList" class="ig-sync-list"></div>
+    <div class="admin-actions" id="igSyncCommitRow" style="display:none;margin-top:16px;">
+      <button class="btn-admin primary" id="igSyncCommitBtn" type="button">Add selected items</button>
+      <button class="btn-admin" id="igSyncCancelBtn" type="button">Cancel</button>
+    </div>
+  </section>
+
+  <!-- ====== QUICK NAV ====== -->
+  <nav class="admin-nav" id="adminNav">
+    <a href="#igSyncDash" class="admin-nav-cta">⚡ Add stock from IG</a>
+    <a href="#posDash" class="admin-nav-pos">🛒 Sell in store</a>
+    <a href="#addForm">+ Add manually</a>
+    <a href="#salesDash">Sales</a>
+    <a href="#invDash">Inventory</a>
+    <a href="#broadcastDash">WhatsApp Marketing</a>
+    <a href="#clientsDash" id="clientsNavLink">Clients <span class="admin-nav-count" id="navClientsCount"></span><span class="admin-nav-new" id="clientsNavNew">NEW</span></a>
+    <a href="#insightsDash">Insights</a>
+    <a href="#allItems">All items <span class="admin-nav-count" id="navItemCount"></span></a>
+    <a href="#trashSection">Trash <span class="admin-nav-count" id="navTrashCount"></span></a>
+  </nav>
+
+  <!-- ====== POS — SELL IN STORE (counter checkout + receipts) ====== -->
+  <section class="dash" id="posDash">
+    <h2 class="dash-title">🛒 Sell in store</h2>
+    <p class="pos-sub">Record a sale you made in person. Stock updates and it lands in your Sales totals automatically. Tap <strong>M-Pesa</strong> just to note how you were paid.</p>
+    <div id="posTodaySplit" class="pos-today"></div>
+
+    <div class="pos-card">
+      <div class="field">
+        <label>Find the item</label>
+        <input id="posItemSearch" type="search" placeholder="Search by name…" autocomplete="off">
+        <div id="posItemResults" class="pos-results" style="display:none;"></div>
+      </div>
+      <div id="posChosen" class="pos-chosen" style="display:none;"></div>
+
+      <div id="posSaleFields" style="display:none;">
+        <div class="pos-row">
+          <div class="field"><label>Size</label><select id="posSize"></select></div>
+          <div class="field pos-qty"><label>Qty</label><input id="posQty" type="number" min="1" value="1"></div>
+          <div class="field"><label>Price (Ksh)</label><input id="posPrice" type="number" min="0"></div>
+        </div>
+        <div class="field">
+          <label>Payment</label>
+          <div class="pos-pay" id="posPay">
+            <button type="button" class="pos-pay-btn active" data-pay="cash">💵 Cash</button>
+            <button type="button" class="pos-pay-btn" data-pay="mpesa">📱 M-Pesa</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Customer details <small style="font-weight:400;color:#999;">optional, for a receipt and to save them to Clients</small></label>
+          <div id="posCustomerFields" style="margin-top:4px;">
+            <input id="posBuyerName" type="text" placeholder="Customer name (optional)">
+            <input id="posBuyerPhone" type="tel" placeholder="Phone e.g. 0712345678 (optional)" style="margin-top:8px;">
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-admin primary" id="posRecordBtn" type="button">Record sale</button>
+          <button class="btn-admin" id="posCancelBtn" type="button">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="posReceiptPanel" class="pos-receipt-panel" style="display:none;">
+      <div class="pos-done">✓ Sale recorded</div>
+      <div id="posReceiptSummary" class="pos-receipt-summary"></div>
+      <div class="admin-actions">
+        <a id="posWaReceiptBtn" class="btn-admin primary" target="_blank" rel="noopener" style="display:none;">Send WhatsApp receipt</a>
+        <button id="posPrintReceiptBtn" class="btn-admin" type="button">Print receipt</button>
+        <button id="posNewSaleBtn" class="btn-admin" type="button">New sale</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== SALES DASHBOARD ====== -->
+  <section class="dash" id="salesDash">
+    <h2 class="dash-title">Sales Overview</h2>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <h3>Top categories</h3>
+        <div id="topCats" class="cat-bars"></div>
+      </div>
+      <div class="dash-card">
+        <h3>Recent sales</h3>
+        <div id="recentSales" class="recent-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== INVENTORY DASHBOARD ====== -->
+  <section class="dash" id="invDash">
+    <h2 class="dash-title">Inventory Overview</h2>
+    <div class="inv-kpi-grid" id="invKpiGrid"></div>
+    <div class="section-divider">Stock levels <span id="invSortLabel">sorted low → high</span></div>
+    <div class="inv-filter-bar filter-pills" id="invFilterBar"></div>
+    <div class="inv-table-wrap">
+      <table class="inv-table" id="invTable">
+        <thead>
+          <tr>
+            <th style="width:50px"></th>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Stock by size</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="invTableBody"></tbody>
+      </table>
+    </div>
+    <button class="btn-admin" id="invShowMore" style="display:none;width:100%;margin-top:14px;"></button>
+  </section>
+
+  <!-- ====== WHATSAPP BROADCAST ====== -->
+  <section class="dash" id="broadcastDash">
+    <h2 class="dash-title">WhatsApp Marketing</h2>
+    <div style="background:#fff7e6;border:1px solid #f0d9a8;border-left:4px solid #d99a2b;border-radius:8px;padding:12px 14px;margin:0 0 16px;font-size:13px;line-height:1.55;color:#4a3528;">
+      <strong style="display:block;color:#1c1208;margin-bottom:3px;">⏳ Why this sends one message at a time</strong>
+      WhatsApp bans numbers that send lots of messages too fast. Going one buyer at a time, each with a personal message, is exactly what keeps your number safe. Take it steady, don't rush it, and never use bulk-blast apps. A calm pace protects your number and your business.
+    </div>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:-8px 0 16px;">Pick items, compose a message and send to past buyers. <strong>Manual mode for now</strong> — clicks open WhatsApp Web pre-filled with the message and the buyer's number. Connect WA Business API + GHL later to make this one-click.</p>
+
+    <div class="set-form" style="background:#fff;">
+      <div class="field">
+        <label>Subject of the broadcast</label>
+        <input id="broadcastSubject" type="text" placeholder="e.g. New linen drop · 4 colors just landed">
+      </div>
+      <div class="field">
+        <label>Items to include in the message <small style="font-weight:400;color:#999;">(optional — search and tap to add)</small></label>
+        <div id="broadcastSelectedItems" class="set-selected-items"></div>
+        <input id="broadcastItemSearch" type="text" placeholder="Search items by name…" style="margin-top:8px;">
+        <div id="broadcastItemPicker" class="set-item-picker"></div>
+      </div>
+      <div class="field">
+        <label>Recipients <small style="font-weight:400;color:#999;">— past buyers from your sales history; deselect anyone you don't want to message</small></label>
+        <div class="broadcast-filter-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;">
+          <span style="font-size:12px;color:#999;">Target buyers who bought:</span>
+          <select id="broadcastFilterCat" class="sort-select" style="font-size:13px;padding:7px 30px 7px 12px;"></select>
+          <select id="broadcastFilterSize" class="sort-select" style="font-size:13px;padding:7px 30px 7px 12px;"></select>
+          <span id="broadcastFilterMatch" style="font-size:12px;color:var(--ink-faint);"></span>
+        </div>
+        <div id="broadcastRecipients" class="broadcast-recipients"></div>
+      </div>
+      <div class="field">
+        <label>Message preview</label>
+        <textarea id="broadcastPreview" readonly style="min-height:120px;background:var(--surface);font-family:inherit;"></textarea>
+      </div>
+      <div class="admin-actions">
+        <button class="btn-admin gold" id="broadcastStartBtn">Start sending →</button>
+        <button class="btn-admin" id="broadcastCopyBtn">Copy message only</button>
+      </div>
+      <p id="broadcastStatus" style="font-size:13px;color:var(--ink-soft);margin-top:10px;"></p>
+      <div id="broadcastStepper" class="broadcast-stepper" style="display:none;margin-top:12px;"></div>
+    </div>
+  </section>
+
+  <!-- ====== CLIENTS ====== -->
+  <section class="dash" id="clientsDash">
+    <h2 class="dash-title">Clients</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin:-8px 0 16px;">Everyone who's bought from you, with what they bought and how to reach them. Save a buyer's name and phone when you record a sale, and they'll appear here so you can message them when new stock lands.</p>
+    <div class="inv-kpi-grid" id="clientsKpiGrid"></div>
+    <div class="clients-controls">
+      <input type="search" id="clientsSearch" placeholder="Search by name or phone…" autocomplete="off">
+      <select id="clientsSort" class="sort-select">
+        <option value="recent">Most recent</option>
+        <option value="spend">Highest spend</option>
+        <option value="purchases">Most purchases</option>
+      </select>
+      <button class="btn-admin primary" id="clientsAddBtn" type="button">+ Add client</button>
+    </div>
+    <div id="clientsList" class="clients-list"></div>
+  </section>
+
+  <!-- ====== INSIGHTS (per-browser) ====== -->
+  <section class="dash" id="insightsDash">
+    <h2 class="dash-title">Insights <small style="font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:0.08em;color:var(--ink-faint);text-transform:uppercase;margin-left:6px;">Whole shop · all visitors</small></h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin:-8px 0 16px;">What shoppers are doing on your store, added up across everyone who visits, on any phone or computer. The numbers update a few seconds after someone views an item, saves it, asks about it, or searches.</p>
+    <div class="inv-kpi-grid" id="insightsKpiGrid"></div>
+    <div class="dash-grid" style="margin-top:18px;">
+      <div class="dash-card">
+        <h3>Most viewed</h3>
+        <div id="insightsTopViews" class="recent-list"></div>
+      </div>
+      <div class="dash-card">
+        <h3>Most enquired about</h3>
+        <div id="insightsTopEnquiries" class="recent-list"></div>
+      </div>
+    </div>
+    <div class="dash-card" style="margin-top:14px;">
+      <h3>Searches with no results <small style="font-family:var(--sans);font-size:11px;font-weight:500;color:var(--ink-faint);margin-left:6px;">— stock to consider adding</small></h3>
+      <div id="insightsSearchGaps"></div>
+    </div>
+    <button class="btn-admin" id="insightsResetBtn" style="margin-top:14px;font-size:12px;">Reset insights</button>
+  </section>
+
+  <!-- ====== ADD / EDIT ITEM ====== -->
+  <div class="admin-form" id="addForm">
+    <h2 id="formTitle">Add a new item</h2>
+    <input type="hidden" id="editingId">
+
+    <!-- IG quick-add — fastest path -->
+    <div class="ig-quick-add" id="igQuickPanel">
+      <div class="ig-quick-head">
+        <span class="ig-quick-badge">⚡ FASTEST WAY</span>
+        <h3 class="ig-quick-title">Quick-add from Instagram</h3>
+      </div>
+      <p class="ig-quick-desc">Paste any IG post or reel URL — we'll auto-fill the image, description and IG link. You just review and set price + stock.</p>
+      <div class="ig-quick-row">
+        <input id="igQuickInput" type="url" placeholder="https://www.instagram.com/p/...">
+        <button class="btn-admin primary" id="igQuickBtn" type="button">Fetch from IG →</button>
+      </div>
+      <p id="igQuickStatus" class="ig-quick-status"></p>
+    </div>
+
+    <div class="manual-entry-divider" id="manualEntryDivider">
+      <span>OR enter manually below</span>
+    </div>
+
+    <div class="field">
+      <label>Main image</label>
+      <input id="imageInput" type="file" accept="image/*">
+      <div id="imagePreview" style="margin-top:10px;"></div>
+      <p style="font-size:12px;color:#999;margin-top:6px;">Square crop recommended · ~1080×1080.</p>
+    </div>
+
+    <div class="field">
+      <label>Additional images <small style="font-weight:400;color:#999;">— optional, up to 8. Buyers will swipe through them on the card.</small></label>
+      <input id="extraImagesInput" type="file" accept="image/*" multiple>
+      <div id="extraImagesPreview" class="extra-imgs-preview"></div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Item name</label>
+        <input id="nameInput" type="text" placeholder="e.g. iPhone 15 Pro Max Silicone Case" required>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="categoryInput">
+          <option value="">— Select category —</option>
+          <optgroup label="Cases">
+            <option value="Phone Cases">Phone Cases</option>
+            <option value="iPad Cases">iPad Cases</option>
+            <option value="Tablet Cases">Tablet Cases</option>
+            <option value="MacBook Cases">MacBook Cases</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="Screen Protectors">Screen Protectors</option>
+            <option value="Accessories">Accessories</option>
+          </optgroup>
+          <option value="__new__">+ Add new category…</option>
+        </select>
+        <input id="categoryNewInput" type="text" placeholder="Type the new category name" style="display:none;margin-top:8px;" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Description</label>
+      <textarea id="descInput" placeholder="Tap 'Suggest' or write your own..."></textarea>
+      <button class="btn-admin" id="aiBtn" type="button" style="margin-top:8px;">✨ Suggest description</button>
+    </div>
+
+    <div class="field">
+      <label>Price (Ksh) <small style="font-weight:400;color:#999;">— optional. Leave blank and the site shows "Price on request".</small></label>
+      <input id="priceInput" type="number" min="0" step="50" placeholder="Leave blank for Price on request">
+    </div>
+
+    <div class="field">
+      <label>Sale price (Ksh) <small style="font-weight:400;color:#999;">— optional. Leave blank for no sale. Must be below the price; the original shows struck-through with a red SALE tag.</small></label>
+      <input id="itemSalePriceInput" type="number" min="0" step="50" placeholder="e.g. 4500">
+    </div>
+
+    <!-- STOCK ENTRY -->
+    <div class="field">
+      <label>Stock <small style="font-weight:400;color:#999;">— enter quantity per device model. Use "Universal" for items that fit any device (chargers, cables, earphones etc.)</small></label>
+
+      <div class="stock-entry-group">
+        <label class="group-label">Universal / fits any device</label>
+        <div class="stock-entry-row">
+          <div class="stock-entry-item" style="align-items:flex-start;">
+            <span class="size-lbl">Qty</span>
+            <input type="number" min="0" step="1" data-size="One Size" class="stock-qty" style="width:120px;" placeholder="e.g. 10">
+          </div>
+        </div>
+      </div>
+
+      <div class="stock-entry-group">
+        <label class="group-label">iPhone</label>
+        <div class="stock-entry-row" id="stockIphone">
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 11</span><input type="number" min="0" step="1" data-size="iPhone 11" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 12</span><input type="number" min="0" step="1" data-size="iPhone 12" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 13</span><input type="number" min="0" step="1" data-size="iPhone 13" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 14</span><input type="number" min="0" step="1" data-size="iPhone 14" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 14 Pro Max</span><input type="number" min="0" step="1" data-size="iPhone 14 Pro Max" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 15</span><input type="number" min="0" step="1" data-size="iPhone 15" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 15 Pro Max</span><input type="number" min="0" step="1" data-size="iPhone 15 Pro Max" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 16</span><input type="number" min="0" step="1" data-size="iPhone 16" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 16 Pro Max</span><input type="number" min="0" step="1" data-size="iPhone 16 Pro Max" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 17</span><input type="number" min="0" step="1" data-size="iPhone 17" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPhone 17 Pro Max</span><input type="number" min="0" step="1" data-size="iPhone 17 Pro Max" class="stock-qty"></div>
+        </div>
+      </div>
+
+      <div class="stock-entry-group" style="margin-top:10px;">
+        <label class="group-label">Samsung Galaxy</label>
+        <div class="stock-entry-row" id="stockSamsung">
+          <div class="stock-entry-item"><span class="size-lbl">Galaxy S22</span><input type="number" min="0" step="1" data-size="Galaxy S22" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">Galaxy S23</span><input type="number" min="0" step="1" data-size="Galaxy S23" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">Galaxy S24</span><input type="number" min="0" step="1" data-size="Galaxy S24" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">Galaxy S24 Ultra</span><input type="number" min="0" step="1" data-size="Galaxy S24 Ultra" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">Galaxy S25</span><input type="number" min="0" step="1" data-size="Galaxy S25" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">Galaxy A15</span><input type="number" min="0" step="1" data-size="Galaxy A15" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">Galaxy A55</span><input type="number" min="0" step="1" data-size="Galaxy A55" class="stock-qty"></div>
+        </div>
+      </div>
+
+      <div class="stock-entry-group" style="margin-top:10px;">
+        <label class="group-label">iPad / Tablet</label>
+        <div class="stock-entry-row" id="stockTablet">
+          <div class="stock-entry-item"><span class="size-lbl">iPad 9th Gen</span><input type="number" min="0" step="1" data-size="iPad 9th Gen" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPad 10th Gen</span><input type="number" min="0" step="1" data-size="iPad 10th Gen" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPad Air</span><input type="number" min="0" step="1" data-size="iPad Air" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPad Pro</span><input type="number" min="0" step="1" data-size="iPad Pro" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">iPad Mini</span><input type="number" min="0" step="1" data-size="iPad Mini" class="stock-qty"></div>
+        </div>
+      </div>
+
+      <div class="stock-entry-group" style="margin-top:10px;">
+        <label class="group-label">MacBook</label>
+        <div class="stock-entry-row" id="stockMacbook">
+          <div class="stock-entry-item"><span class="size-lbl">MacBook Air</span><input type="number" min="0" step="1" data-size="MacBook Air" class="stock-qty"></div>
+          <div class="stock-entry-item"><span class="size-lbl">MacBook Pro</span><input type="number" min="0" step="1" data-size="MacBook Pro" class="stock-qty"></div>
+        </div>
+      </div>
+
+      <div class="stock-entry-group" style="margin-top:10px;">
+        <label class="group-label">Custom size <small style="font-weight:400;color:#999;">— any device model not listed above (e.g. OnePlus 15, Tecno Spark, Redmi Note 13). Add as many as you need.</small></label>
+        <div class="custom-size-rows" id="customSizeRows"></div>
+        <button class="btn-admin" id="addCustomSizeBtn" type="button" style="font-size:12px;padding:6px 12px;margin-top:6px;">+ Add custom size</button>
+      </div>
+    </div>
+
+    <div class="admin-actions">
+      <button class="btn-admin primary" id="saveBtn">Save item</button>
+      <button class="btn-admin" id="cancelBtn" style="display:none;">Cancel edit</button>
+    </div>
+  </div>
+
+  <!-- ====== ITEM LIST ====== -->
+  <div class="section-divider" id="allItems">
+    All items <span id="bagCount">0</span>
+    <button class="btn-admin" style="margin-left:auto;font-size:12px;padding:6px 12px;" onclick="bulkSelectAll()">Select all</button>
+  </div>
+
+  <!-- Search bar — find specific items fast instead of scrolling -->
+  <div class="admin-list-search">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="adminItemSearch" type="search" placeholder="Search items by name, category…" autocomplete="off">
+    <span id="adminItemSearchCount"></span>
+  </div>
+
+  <div class="bulk-bar" id="bulkActions" style="display:none;">
+    <span><strong id="bulkCount">0</strong> selected</span>
+    <button class="btn-admin" onclick="bulkSetCategory()">Set category</button>
+    <button class="btn-admin" onclick="bulkPutOnSale()">Put on sale</button>
+    <button class="btn-admin" onclick="bulkRemoveSale()">Remove sale</button>
+    <button class="btn-admin danger" onclick="bulkDelete()">Delete</button>
+    <button class="btn-admin" onclick="bulkClear()">Clear</button>
+  </div>
+  <div class="admin-list" id="adminList"></div>
+
+  <!-- ====== TRASH ====== -->
+  <div class="section-divider" id="trashSection">
+    Trash <span id="trashCount">0</span>
+    <button class="btn-admin danger" id="emptyTrashBtn" style="margin-left:auto;font-size:12px;padding:6px 12px;display:none;" onclick="emptyTrash()">Empty trash</button>
+  </div>
+  <p class="sub" style="margin:-6px 0 10px;color:var(--ink-faint);font-size:13px;">Deleted items are kept here so you can restore them. Stored on this device only.</p>
+  <div class="admin-list" id="trashList"></div>
+
+</div><!-- /dashboard -->
+
+<div class="toast" id="toast"></div>
+
+<!-- Printable POS receipt (hidden on screen, shown only when printing) -->
+<div id="posReceiptPrint" aria-hidden="true"></div>
+
+<!-- SALE MODAL -->
+<div id="saleModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3 id="saleModalTitle">Record a sale</h3>
+    <p class="sub">Reduce stock and optionally save buyer details for remarketing.</p>
+
+    <div class="field">
+      <label>Size sold</label>
+      <select id="saleSizeInput"></select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quantity</label>
+        <input id="saleQtyInput" type="number" min="1" value="1">
+      </div>
+      <div class="field">
+        <label>Sale price (Ksh) <small style="font-weight:400;color:#999;">optional override</small></label>
+        <input id="salePriceInput" type="number" min="0" step="50">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Payment</label>
+      <div class="pos-pay" id="saleModalPay">
+        <button type="button" class="pos-pay-btn active" data-pay="cash">💵 Cash</button>
+        <button type="button" class="pos-pay-btn" data-pay="mpesa">📱 M-Pesa</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Buyer name <small style="font-weight:400;color:#999;">optional</small></label>
+      <input id="buyerName" type="text" placeholder="e.g. Brian Kamau">
+    </div>
+    <div class="field">
+      <label>Buyer phone <small style="font-weight:400;color:#999;">optional</small></label>
+      <input id="buyerPhone" type="tel" placeholder="254712345678">
+    </div>
+    <div class="field">
+      <label>Notes <small style="font-weight:400;color:#999;">optional</small></label>
+      <input id="buyerNotes" type="text" placeholder="Delivery address, payment method...">
+    </div>
+
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin gold" id="saleSaveBtn">Record sale</button>
+      <button class="btn-admin" id="saleSkipBtn">Skip buyer &amp; mark sold</button>
+      <button class="btn-admin danger" id="saleCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTOCK MODAL -->
+<div id="restockModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3 id="restockModalTitle">Restock item</h3>
+    <p class="sub">Add units to existing stock.</p>
+    <div class="field">
+      <label>Size</label>
+      <select id="restockSizeInput"></select>
+    </div>
+    <div class="field">
+      <label>Units to add</label>
+      <input id="restockQtyInput" type="number" min="1" value="1">
+    </div>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin primary" id="restockSaveBtn">Add stock</button>
+      <button class="btn-admin danger" id="restockCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT SALE MODAL -->
+<div id="editSaleModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3 id="editSaleTitle">Edit sale</h3>
+    <p class="sub">Adjust this sale. Stock is corrected automatically.</p>
+    <div class="field-row">
+      <div class="field">
+        <label>Size</label>
+        <input id="editSaleSize" type="text">
+      </div>
+      <div class="field">
+        <label>Quantity</label>
+        <input id="editSaleQty" type="number" min="1" value="1">
+      </div>
+    </div>
+    <div class="field">
+      <label>Sale price (Ksh)</label>
+      <input id="editSalePrice" type="number" min="0" step="50">
+    </div>
+    <div class="field">
+      <label>Buyer name <small style="font-weight:400;color:#999;">optional</small></label>
+      <input id="editBuyerName" type="text">
+    </div>
+    <div class="field">
+      <label>Buyer phone <small style="font-weight:400;color:#999;">optional</small></label>
+      <input id="editBuyerPhone" type="tel">
+    </div>
+    <div class="field">
+      <label>Notes <small style="font-weight:400;color:#999;">optional</small></label>
+      <input id="editBuyerNotes" type="text">
+    </div>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin gold" id="editSaleSaveBtn">Save changes</button>
+      <button class="btn-admin danger" id="editSaleCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY MODAL (replaces native prompt() — suppressed in in-app webviews) -->
+<div id="categoryModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3>Set category</h3>
+    <p class="sub">Move the selected items to this category.</p>
+    <div class="field">
+      <label>Category</label>
+      <select id="categoryModalSelect"></select>
+    </div>
+    <div class="field" id="categoryModalNewWrap" style="display:none;">
+      <label>New category name</label>
+      <input id="categoryModalNew" type="text" placeholder="e.g. Blazers">
+    </div>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin gold" id="categoryModalOk">Apply</button>
+      <button class="btn-admin" id="categoryModalCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL (replaces native confirm() — suppressed in in-app webviews) -->
+<div id="confirmModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3 id="confirmModalTitle">Are you sure?</h3>
+    <p class="sub" id="confirmModalMsg"></p>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin danger" id="confirmModalOk">Delete</button>
+      <button class="btn-admin" id="confirmModalCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK SALE MODAL -->
+<div id="bulkSaleModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3>Put selected items on sale</h3>
+    <p class="sub">Applies to <strong id="bulkSaleCount">0</strong> selected item(s). The original price shows struck-through on the website with a red SALE tag.</p>
+    <div class="field">
+      <label>Discount type</label>
+      <div class="bulk-sale-toggle" style="display:flex;gap:8px;margin-top:4px;">
+        <button type="button" class="btn-admin sale-mode-btn active" data-sale-mode="pct">% off</button>
+        <button type="button" class="btn-admin sale-mode-btn" data-sale-mode="fixed">Set exact price</button>
+      </div>
+    </div>
+    <div class="field" id="bulkSalePctField">
+      <label>Percent off</label>
+      <input id="bulkSalePct" type="number" min="1" max="90" step="5" placeholder="e.g. 30">
+      <p style="font-size:12px;color:#999;margin-top:4px;">Each item's sale price = its own price minus this %, rounded to the nearest 50.</p>
+    </div>
+    <div class="field" id="bulkSaleFixedField" style="display:none;">
+      <label>New sale price (Ksh)</label>
+      <input id="bulkSaleFixed" type="number" min="0" step="50" placeholder="e.g. 4500">
+      <p style="font-size:12px;color:#999;margin-top:4px;">Same flat price applied to every selected item. Items already at or below this are skipped.</p>
+    </div>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin gold" id="bulkSaleSaveBtn">Apply sale</button>
+      <button class="btn-admin danger" id="bulkSaleCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CLIENT MODAL -->
+<div id="addClientModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3>Add a client</h3>
+    <p class="sub">Save a contact — a DM enquiry, a walk-in, a referral. Optionally pick what they bought and it's recorded as a real sale.</p>
+    <div class="field">
+      <label>Name</label>
+      <input id="addClientName" type="text" placeholder="e.g. Sarah Kamau">
+    </div>
+    <div class="field">
+      <label>Phone <small style="font-weight:400;color:#999;">— include the leading 0 or 254</small></label>
+      <input id="addClientPhone" type="tel" placeholder="0712345678">
+    </div>
+    <div class="field">
+      <label>Item bought <small style="font-weight:400;color:#999;">— optional. Type to find an item; pick it to record a real sale (drops stock, counts in your Sales totals). Leave blank to just save the contact.</small></label>
+      <input id="addClientItemSearch" type="search" placeholder="Start typing an item name…" autocomplete="off">
+      <div id="addClientItemResults" class="client-item-results" style="display:none;"></div>
+      <div id="addClientChosen" class="client-item-chosen" style="display:none;"></div>
+    </div>
+    <div id="addClientSaleFields" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Size</label><select id="addClientSize"></select></div>
+        <div class="field"><label>Qty</label><input id="addClientQty" type="number" min="1" value="1"></div>
+        <div class="field"><label>Price (Ksh)</label><input id="addClientPrice" type="number" min="0" step="100"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Note <small style="font-weight:400;color:#999;">optional</small></label>
+      <input id="addClientNote" type="text" placeholder="e.g. asked about size 42 loafers">
+    </div>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin primary" id="addClientSaveBtn">Save client</button>
+      <button class="btn-admin danger" id="addClientCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js?v=20260603posclient"></script>
+</body>
+</html>

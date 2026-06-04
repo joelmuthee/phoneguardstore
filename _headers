@@ -1,0 +1,14 @@
+# Cloudflare Pages headers.
+#
+# Admin must ALWAYS revalidate. By default CF Pages sends no Cache-Control on
+# HTML documents, so browsers — especially the WhatsApp/Instagram in-app
+# webviews owners use — heuristically cache a stale admin.html for hours. After
+# a redeploy the owner then sees an old admin (missing newly-added sections like
+# Clients / Sell in store) until that heuristic cache expires. `no-cache` forces
+# a revalidation on every load (304 when unchanged, fresh when redeployed), so
+# admin changes show up immediately. Versioned assets (admin.js?v=, styles.css?v=)
+# keep their long cache — only the HTML entry points need this.
+/admin
+  Cache-Control: no-cache, must-revalidate
+/admin.html
+  Cache-Control: no-cache, must-revalidate
