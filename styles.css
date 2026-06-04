@@ -201,6 +201,65 @@ img { max-width: 100%; display: block; }
   .filter-drop { flex: 1 1 calc(50% - 5px); }  /* two dropdowns share a row on mobile */
 }
 
+/* Custom filter dropdown — page-controlled so the open list shows a scroll cue
+   (a native <select> popup is OS-drawn and gives no hint that more sits below).
+   Root .cdrop is just the positioning container (width); the trigger button
+   carries .filter-select for the pill look. */
+.cdrop { position: relative; width: 100%; }
+.cdrop-trigger { width: 100%; max-width: 100%; text-align: left; display: flex; align-items: center; }
+.cdrop-current { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdrop.open .cdrop-trigger { border-color: var(--gold); }
+/* Active (non-"All") filter — yellow tint so a set filter reads as deliberate. */
+.cdrop--active .cdrop-trigger {
+  background-color: rgba(245, 181, 10, 0.14);
+  border-color: var(--gold);
+  color: var(--ink); font-weight: 600;
+}
+.cdrop-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(13, 27, 42, 0.16);
+  overflow: hidden;
+}
+.cdrop-panel[hidden] { display: none; }
+.cdrop-scroll {
+  max-height: 280px; overflow-y: auto; padding: 6px;
+  scrollbar-width: thin; scrollbar-color: var(--gold) var(--surface);
+}
+.cdrop-scroll::-webkit-scrollbar { width: 9px; }
+.cdrop-scroll::-webkit-scrollbar-track { background: var(--surface); border-radius: 4px; }
+.cdrop-scroll::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+.cdrop-scroll::-webkit-scrollbar-thumb:hover { background: var(--gold-deep); }
+.cdrop-group {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-faint); padding: 8px 12px 4px;
+}
+.cdrop-opt {
+  display: block; width: 100%; text-align: left;
+  padding: 11px 14px; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: 14px; color: var(--ink); border-radius: 9px;
+}
+.cdrop-opt:hover { background: var(--surface); }
+.cdrop-opt.selected { background: var(--ink); color: var(--gold-light); font-weight: 600; }
+/* "more below" cue — fade + chevron pinned to the panel's bottom edge, shown
+   only while the list can still scroll down. */
+.cdrop-morehint {
+  position: absolute; left: 1px; right: 1px; bottom: 0; height: 38px;
+  pointer-events: none; opacity: 0; transition: opacity 0.18s ease;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), #fff 78%);
+  border-radius: 0 0 14px 14px;
+}
+.cdrop-morehint.show { opacity: 1; }
+.cdrop-morehint::after {
+  content: ''; position: absolute; left: 50%; bottom: 7px;
+  width: 11px; height: 11px; margin-left: -5.5px;
+  border-right: 2.5px solid var(--gold-deep); border-bottom: 2.5px solid var(--gold-deep);
+  transform: rotate(45deg);
+  animation: cdropBob 1.3s ease-in-out infinite;
+}
+@keyframes cdropBob { 0%, 100% { transform: translateY(0) rotate(45deg); } 50% { transform: translateY(3px) rotate(45deg); } }
+@media (prefers-reduced-motion: reduce) { .cdrop-morehint::after { animation: none; } }
+
 /* NEW / Stock urgency / Heart badges */
 .badge-new {
   position: absolute; top: 14px; left: 14px;

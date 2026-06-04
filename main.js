@@ -230,20 +230,87 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
   }
 
   function buildCatPills() {
+    initDropdowns();
     const cats = getCategories();
     if (!cats.length) { catPills.innerHTML = ''; return; }
-    catPills.innerHTML = `<select class="filter-select" id="catSelect" aria-label="Filter by phone type">`
-      + `<option value="all">All phone types</option>`
-      + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')
-      + `</select>`;
-    const sel = document.getElementById('catSelect');
-    sel.value = currentCat;
-    sel.addEventListener('change', () => {
-      currentCat = sel.value;
-      currentSize = 'all';
-      currentPage = 1;
-      render();
+    const groups = [{ label: null, options: [{ val: 'all', text: 'All phone types' }].concat(cats.map(c => ({ val: c, text: c }))) }];
+    catPills.innerHTML = dropdownHTML({ kind: 'cat', value: currentCat, ariaLabel: 'Filter by phone type', groups });
+  }
+
+  // Custom filter dropdown — replaces the native <select> so the open list can
+  // show a "scroll for more" cue (a native option popup is OS-drawn and can't be
+  // styled; it gives no at-rest hint that more options sit below the fold).
+  // Root is bare .cdrop (this catalog's .filter-select is a full select style, so
+  // it goes on the trigger button, not the positioning container).
+  function dropdownHTML({ kind, value, ariaLabel, groups }) {
+    let cur = null;
+    groups.forEach(g => g.options.forEach(o => { if (o.val === value) cur = o; }));
+    if (!cur) cur = groups[0].options[0];
+    const body = groups.map(g =>
+      (g.label ? `<div class="cdrop-group">${escapeHtml(g.label)}</div>` : '') +
+      g.options.map(o => `<button type="button" role="option" class="cdrop-opt${o.val === value ? ' selected' : ''}" data-val="${escapeHtml(o.val)}"${o.val === value ? ' aria-selected="true"' : ''}>${escapeHtml(o.text)}</button>`).join('')
+    ).join('');
+    const active = value && value !== 'all';
+    return `<div class="cdrop${active ? ' cdrop--active' : ''}" data-kind="${kind}" aria-label="${escapeHtml(ariaLabel)}">`
+      + `<button type="button" class="cdrop-trigger filter-select" aria-haspopup="listbox" aria-expanded="false"><span class="cdrop-current">${escapeHtml(cur.text)}</span></button>`
+      + `<div class="cdrop-panel" role="listbox" hidden><div class="cdrop-scroll">${body}</div><div class="cdrop-morehint" aria-hidden="true"></div></div>`
+      + `</div>`;
+  }
+
+  function updateDropHint(sc) {
+    const hint = sc.parentElement && sc.parentElement.querySelector('.cdrop-morehint');
+    if (hint) hint.classList.toggle('show', sc.scrollHeight - sc.scrollTop - sc.clientHeight > 4);
+  }
+  function closeAllDropdowns() {
+    document.querySelectorAll('.cdrop.open').forEach(d => {
+      d.classList.remove('open');
+      const p = d.querySelector('.cdrop-panel'); if (p) p.hidden = true;
+      const t = d.querySelector('.cdrop-trigger'); if (t) t.setAttribute('aria-expanded', 'false');
     });
+  }
+  function openDropdown(drop) {
+    drop.classList.add('open');
+    drop.querySelector('.cdrop-panel').hidden = false;
+    drop.querySelector('.cdrop-trigger').setAttribute('aria-expanded', 'true');
+    const sc = drop.querySelector('.cdrop-scroll');
+    const sel = sc.querySelector('.cdrop-opt.selected');
+    if (sel) sc.scrollTop = Math.max(0, sel.offsetTop - 8);
+    updateDropHint(sc);
+  }
+  // Bind all dropdown interaction ONCE via delegation — buildCatPills/buildSizePills
+  // re-run on every render(), so per-element listeners would leak.
+  let dropdownsBound = false;
+  function initDropdowns() {
+    if (dropdownsBound) return;
+    dropdownsBound = true;
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('.cdrop-trigger');
+      if (trigger) {
+        e.stopPropagation();
+        const drop = trigger.closest('.cdrop');
+        const wasOpen = drop.classList.contains('open');
+        closeAllDropdowns();
+        if (!wasOpen) openDropdown(drop);
+        return;
+      }
+      const opt = e.target.closest('.cdrop-opt');
+      if (opt) {
+        const drop = opt.closest('.cdrop');
+        const val = opt.dataset.val, kind = drop.dataset.kind;
+        closeAllDropdowns();
+        if (kind === 'cat') { currentCat = val; currentSize = 'all'; }
+        else if (kind === 'size') { currentSize = val; }
+        currentPage = 1;
+        render();
+        return;
+      }
+      if (!e.target.closest('.cdrop-panel')) closeAllDropdowns();
+    });
+    // scroll doesn't bubble — listen in capture phase to catch the inner list scroll
+    document.addEventListener('scroll', (e) => {
+      if (e.target.classList && e.target.classList.contains('cdrop-scroll')) updateDropHint(e.target);
+    }, true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllDropdowns(); });
   }
 
   // Which phone-brand group a device model belongs to (for the size dropdown).
@@ -263,23 +330,14 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
     const sizes = getAllSizesForFilter();
     if (sizes.length < 2) { sizePills.innerHTML = ''; return; }
     const order = ['iPhone', 'Samsung Galaxy', 'Google Pixel', 'OnePlus', 'Oppo', 'iPad', 'Galaxy Tab', 'MacBook', 'Other'];
-    const groups = {};
-    sizes.forEach(s => { (groups[sizeBrandGroup(s)] = groups[sizeBrandGroup(s)] || []).push(s); });
-    let opts = `<option value="all">All models</option>`;
+    const grouped = {};
+    sizes.forEach(s => { (grouped[sizeBrandGroup(s)] = grouped[sizeBrandGroup(s)] || []).push(s); });
+    const groups = [{ label: null, options: [{ val: 'all', text: 'All models' }] }];
     order.forEach(g => {
-      if (!groups[g] || !groups[g].length) return;
-      opts += `<optgroup label="${g}">`
-        + groups[g].map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')
-        + `</optgroup>`;
+      if (!grouped[g] || !grouped[g].length) return;
+      groups.push({ label: g, options: grouped[g].map(s => ({ val: s, text: s })) });
     });
-    sizePills.innerHTML = `<select class="filter-select" id="sizeSelect" aria-label="Filter by phone model">${opts}</select>`;
-    const sel = document.getElementById('sizeSelect');
-    sel.value = currentSize;
-    sel.addEventListener('change', () => {
-      currentSize = sel.value;
-      currentPage = 1;
-      render();
-    });
+    sizePills.innerHTML = dropdownHTML({ kind: 'size', value: currentSize, ariaLabel: 'Filter by phone model', groups });
   }
 
   function sizeMatch(item) {
