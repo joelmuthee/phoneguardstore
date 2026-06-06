@@ -1074,7 +1074,7 @@ html { scroll-behavior: smooth; }
 
 /* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-.modal-card { background: #fff; border-radius: 14px; padding: 28px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+.modal-card { background: #fff; border-radius: 14px; padding: 28px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .modal-card h3 { font-family: var(--serif); font-size: 24px; font-weight: 500; margin: 0 0 4px; }
 .modal-card p.sub { color: #666; font-size: 14px; margin-bottom: 18px; }
 
