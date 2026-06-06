@@ -619,6 +619,9 @@ img { max-width: 100%; display: block; }
 .shop-card a { color: var(--gold-deep); font-weight: 600; }
 .shop-map { margin-top: 18px; box-shadow: var(--shadow); border-radius: 10px; overflow: hidden; }
 .shop-map iframe { display: block; }
+/* Wide map — full container width below the About/How-to-buy grid. */
+.map-wrap { margin-top: 44px; }
+.map-wrap iframe { display: block; width: 100%; border-radius: 14px; box-shadow: var(--shadow); }
 .footer-shop { font-size: 13px; color: #d4c0a0; }
 .steps { list-style: none; counter-reset: step; }
 .steps li { counter-increment: step; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px solid var(--line); color: var(--ink-soft); }
