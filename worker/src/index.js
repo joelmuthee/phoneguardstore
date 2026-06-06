@@ -29,6 +29,19 @@ const isMaster = (req, env) => {
   return env.MASTER_TOKEN && auth.slice(7).trim() === env.MASTER_TOKEN.trim();
 };
 
+// When the store is suspended (billing kill-switch), the owner keeps READ access
+// to the admin but every WRITE is frozen. MASTER (agency) can still write so the
+// store can be maintained while suspended. Returns a 403 Response when the caller
+// is blocked, or null when the write may proceed. Authoritative gate: the admin
+// UI also blocks these, but this is the real lock the owner can't bypass.
+const suspendBlock = async (req, env) => {
+  if (isMaster(req, env)) return null;
+  if ((await env.BAGS.get("suspended")) === "1") {
+    return json({ error: "account suspended; contact billing to restore the store" }, 403);
+  }
+  return null;
+};
+
 const b64ToBytes = b64 => {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
@@ -671,6 +684,7 @@ export default {
     // Owner sets a new login password (stored as SHA-256 under KV adminpass).
     if (request.method === "POST" && path === "/api/set-password") {
       if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      const blocked = await suspendBlock(request, env); if (blocked) return blocked;
       let body; try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
       const pw = String(body.password || "");
       if (pw.length < 4) return json({ error: "password too short" }, 400);
@@ -722,6 +736,7 @@ export default {
     // Admin: reset aggregated insights (clears the shop-wide tally)
     if (request.method === "POST" && path === "/api/insights-reset") {
       if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      const blocked = await suspendBlock(request, env); if (blocked) return blocked;
       await env.BAGS.put("stats", JSON.stringify({ _lastUpdated: new Date().toISOString() }));
       return json({ ok: true });
     }
@@ -729,6 +744,7 @@ export default {
     // Admin: replace all data
     if (request.method === "POST" && path === "/api/bulk") {
       if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      const blocked = await suspendBlock(request, env); if (blocked) return blocked;
       let body;
       try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
       if (!Array.isArray(body.bags)) return json({ error: "bags must be array" }, 400);
@@ -745,6 +761,7 @@ export default {
     // Admin: upload image
     if (request.method === "POST" && path === "/api/image") {
       if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      const blocked = await suspendBlock(request, env); if (blocked) return blocked;
       let body;
       try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
       const { base64, ext } = body;
@@ -765,7 +782,7 @@ export default {
       if (!body.base64) return json({ error: "base64 required" }, 400);
       try {
         const bytes = b64ToBytes(body.base64);
-        const prompt = `You are picking a product cover photo for a phone/tablet CASE shop. Rate this image from 0 to 100. HIGH (80-100): the case or cover is shown with its FLAT BACK facing the camera, large, centred and clearly visible, well lit. MEDIUM (40-70): case visible but small, slightly angled, or some clutter. LOW (0-30): the case is edge-on / side-on (a thin sliver), tiny, blurry, motion-blurred, mostly a hand, or mostly background shelves of other cases. Reply with ONLY the number, nothing else.`;
+        const prompt = `You are picking a product cover photo for a phone/tablet CASE shop. Rate this image from 0 to 100. HIGH (80-100): the phone/case is held UPRIGHT and STRAIGHT (standing vertically, its long edges level/parallel to the image sides — NOT tilted), with its FLAT BACK facing the camera, large, centred and clearly visible. MEDIUM (40-70): mostly straight but slightly angled, or smaller/some clutter. LOW (0-30): the phone is TILTED, SLANTED or held at a DIAGONAL angle; OR edge-on/side-on (a thin sliver); OR tiny, blurry, motion-blurred, mostly a hand, or mostly background shelves. Penalise a tilted/diagonal phone heavily even if the case is otherwise clear. Reply with ONLY the number, nothing else.`;
         const r = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", { image: [...bytes], prompt, max_tokens: 10, temperature: 0 });
         const txt = typeof r?.response === "string" ? r.response : JSON.stringify(r?.response ?? r);
         const m = String(txt).match(/\d{1,3}/);
@@ -1081,6 +1098,7 @@ export default {
     // IG-rate-limited. Body { items:[{ shortcode, caption, imageUrls, takenAt }] }.
     if (request.method === "POST" && path === "/api/ig-ingest") {
       if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      const blocked = await suspendBlock(request, env); if (blocked) return blocked;
       let body;
       try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
       const inItems = Array.isArray(body.items) ? body.items : [];
@@ -1153,6 +1171,7 @@ export default {
 
     if (request.method === "POST" && path === "/api/ig-sync") {
       if (!isAuthed(request, env)) return json({ error: "unauthorized" }, 401);
+      const blocked = await suspendBlock(request, env); if (blocked) return blocked;
       let body;
       try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
       const items = Array.isArray(body.items) ? body.items : [];
