@@ -345,6 +345,11 @@
       <input id="itemSalePriceInput" type="number" min="0" step="50" placeholder="e.g. 4500">
     </div>
 
+    <div class="field">
+      <label>Buying price (Ksh) <small style="font-weight:400;color:#999;">(optional) — what you paid per unit. Never shown to buyers, just for your profit tracking.</small></label>
+      <input id="costInput" type="number" min="0" step="50" placeholder="e.g. 2000">
+    </div>
+
     <!-- STOCK ENTRY -->
     <div class="field">
       <label>Stock <small style="font-weight:400;color:#999;">— enter quantity per device model. Use "Universal" for items that fit any device (chargers, cables, earphones etc.)</small></label>
@@ -665,6 +670,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=20260606suspendlock"></script>
+<script src="admin.js?v=20260606buyprice"></script>
 </body>
 </html>
