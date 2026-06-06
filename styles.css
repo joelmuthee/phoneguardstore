@@ -1352,7 +1352,10 @@ html { scroll-behavior: smooth; }
 .client-row-main { flex: 1; min-width: 0; }
 .client-row-name { font-size: 15px; font-weight: 700; color: var(--ink, #2a1d10); }
 .client-row-sub { font-size: 12.5px; color: var(--ink-soft, #6b5b48); margin-top: 3px; }
-.client-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.client-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;  max-height: 84px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px; }
+.client-items::-webkit-scrollbar { width: 6px; }
+.client-items::-webkit-scrollbar-thumb { background: rgba(107,91,58,0.35); border-radius: 99px; }
+.client-items::-webkit-scrollbar-track { background: transparent; }
 .client-item {
   font-size: 11.5px; color: #6b5b3a;
   background: #faf6ec; border: 1px solid #e8dcbf; border-radius: 12px;
