@@ -17,7 +17,7 @@
 <meta name="theme-color" content="#0d1b2a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=pgs2wrapcapsheet">
+<link rel="stylesheet" href="styles.css?v=pgs2wrapcapsheetbulksell">
 <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeDBFwpAAAAAJe8ux9-imrqZ2ueRsEtdiWoDDpX" async defer></script>
 </head>
 <body style="background:#f8f6f2;">
@@ -441,6 +441,7 @@
 
   <div class="bulk-bar" id="bulkActions" style="display:none;">
     <span><strong id="bulkCount">0</strong> selected</span>
+    <button class="btn-admin gold" onclick="bulkSell()">🛒 Sell to one customer →</button>
     <button class="btn-admin" onclick="bulkSetCategory()">Set category</button>
     <button class="btn-admin" onclick="bulkPutOnSale()">Put on sale</button>
     <button class="btn-admin" onclick="bulkRemoveSale()">Remove sale</button>
@@ -510,6 +511,47 @@
       <button class="btn-admin gold" id="saleSaveBtn">Record sale</button>
       <button class="btn-admin" id="saleSkipBtn">Skip buyer &amp; mark sold</button>
       <button class="btn-admin danger" id="saleCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK SELL MODAL — sell several items to one customer, details typed once -->
+<div id="bulkSellModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3 id="bulkSellTitle">Sell items to one customer</h3>
+    <p class="sub">All the selected items get marked sold to the same customer. Enter their details once. Each sells at qty 1 at its catalogue price — pick the model where there's more than one.</p>
+    <div class="field">
+      <label>Items in this sale <small style="font-weight:400;color:#999;">out-of-stock items are skipped</small></label>
+      <div id="bulkSellRows" class="bulksell-rows"></div>
+      <p id="bulkSellTotal" style="font-weight:700;margin-top:8px;"></p>
+    </div>
+    <div class="field">
+      <label>Existing customer <small style="font-weight:400;color:#999;">search a saved customer, or just type a new one below</small></label>
+      <input id="bulkSellCustSearch" type="search" placeholder="Search saved customers by name or phone…" autocomplete="off">
+      <div id="bulkSellCustResults" class="client-item-results" style="display:none;"></div>
+    </div>
+    <div class="field"><label>Buyer name <small style="font-weight:400;color:#999;">optional</small></label><input id="bulkSellName" type="text" placeholder="e.g. Brian Kamau"></div>
+    <div class="field"><label>Buyer phone <small style="font-weight:400;color:#999;">optional</small></label><input id="bulkSellPhone" type="tel" placeholder="254712345678"></div>
+    <div class="field"><label>Notes <small style="font-weight:400;color:#999;">optional</small></label><input id="bulkSellNotes" type="text" placeholder="Delivery address, etc."></div>
+    <div class="field">
+      <label>Payment</label>
+      <div class="pos-pay" id="bulkSellPay">
+        <button type="button" class="pos-pay-btn active" data-pay="cash">💵 Cash</button>
+        <button type="button" class="pos-pay-btn" data-pay="mpesa">📱 M-Pesa</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Amount paid now (Ksh) <small style="font-weight:400;color:#999;">for the whole lot — leave blank if paid in full</small></label>
+      <div class="paid-row">
+        <input id="bulkSellPaid" type="number" min="0" step="50" placeholder="Paid in full">
+        <button type="button" class="btn-paid-none" id="bulkSellPaidNone">Not paid yet</button>
+      </div>
+      <p class="paid-hint" id="bulkSellPaidHint" style="display:none;"></p>
+    </div>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin primary" id="bulkSellSaveBtn">Sell &amp; save buyer</button>
+      <button class="btn-admin" id="bulkSellSkipBtn">Skip details — just sell</button>
+      <button class="btn-admin" id="bulkSellCancelBtn">Cancel</button>
     </div>
   </div>
 </div>
@@ -670,6 +712,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=20260606buyprice"></script>
+<script src="admin.js?v=20260606buypricebulksell"></script>
 </body>
 </html>

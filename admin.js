@@ -730,6 +730,8 @@ const buyerNotes = document.getElementById('buyerNotes');
 function openSaleModal(id) {
   const bag = bags.find(b => b.id === id);
   if (!bag) return;
+  // If 2+ items are multi-selected and this is one of them, she means the batch.
+  if (bulkSelected.size >= 2 && bulkSelected.has(id)) { bulkSell(); return; }
   pendingSaleId = id;
   document.getElementById('saleModalTitle').textContent = `Record sale: ${bag.name}`;
   saleSizeInput.innerHTML = '';
@@ -1353,6 +1355,153 @@ async function bulkSetCategory() {
   }
 }
 
+// ====== BULK SELL TO ONE CUSTOMER (new-stock: each selected item → its own sale, qty 1) ======
+// Sells every selected in-stock item to the same buyer in one go. Per item the
+// owner picks a model only when the item has more than one in-stock model; qty is
+// 1 each (a multi-item bundle). An optional part-payment for the whole lot is
+// allocated across items oldest-first so the Owed ledger works. Buyer details
+// (and the existing-customer picker) are entered once.
+function bsEffPrice(b) { return (b.salePrice > 0 && b.salePrice < b.price) ? b.salePrice : (Number(b.price) || 0); }
+function bsInStockSizes(b) {
+  const stock = b.stock || {};
+  const keys = Object.keys(stock);
+  if (!keys.length) return ['One size'];
+  return keys.filter(k => Number(stock[k]) > 0);
+}
+function bulkSellableSelected() { return bags.filter(b => bulkSelected.has(b.id) && bsInStockSizes(b).length > 0); }
+let bulkSellTotalAmt = 0;
+window.bulkSell = () => {
+  const list = bulkSellableSelected();
+  if (!list.length) { showToast('Select at least one in-stock item to sell.'); return; }
+  bulkSellTotalAmt = list.reduce((s, b) => s + bsEffPrice(b), 0);
+  document.getElementById('bulkSellTitle').textContent = `Sell ${list.length} item${list.length === 1 ? '' : 's'} to one customer`;
+  document.getElementById('bulkSellRows').innerHTML = list.map(b => {
+    const sizes = bsInStockSizes(b);
+    const ctl = sizes.length > 1
+      ? `<select class="bsr-size" data-id="${b.id}">${sizes.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}</select>`
+      : `<span class="bsr-onesize" data-id="${b.id}" data-size="${escapeHtml(sizes[0])}">${escapeHtml(sizes[0])}</span>`;
+    return `<div class="bulksell-row"><span class="bulksell-row-name">${escapeHtml(b.name)} · ${fmtKsh(bsEffPrice(b))}</span>${ctl}</div>`;
+  }).join('');
+  document.getElementById('bulkSellTotal').textContent = `Total: ${fmtKsh(bulkSellTotalAmt)} · ${list.length} item${list.length === 1 ? '' : 's'}`;
+  ['bulkSellName', 'bulkSellPhone', 'bulkSellNotes', 'bulkSellPaid', 'bulkSellCustSearch'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('bulkSellPaid').placeholder = 'Paid in full';
+  document.getElementById('bulkSellPaidHint').style.display = 'none';
+  document.getElementById('bulkSellPaidNone').classList.remove('active');
+  const cr = document.getElementById('bulkSellCustResults'); if (cr) { cr.style.display = 'none'; cr.innerHTML = ''; }
+  document.querySelectorAll('#bulkSellPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'cash'));
+  document.getElementById('bulkSellModal').style.display = 'flex';
+};
+function closeBulkSell() { document.getElementById('bulkSellModal').style.display = 'none'; }
+function updateBulkSellHint() {
+  const raw = (document.getElementById('bulkSellPaid').value || '').trim();
+  document.getElementById('bulkSellPaidNone').classList.toggle('active', raw === '0');
+  const hint = document.getElementById('bulkSellPaidHint');
+  if (raw === '') { hint.style.display = 'none'; return; }
+  const bal = bulkSellTotalAmt - Math.min(bulkSellTotalAmt, Math.max(0, parseInt(raw, 10) || 0));
+  hint.style.display = bal > 0 ? '' : 'none';
+  if (bal > 0) hint.textContent = `Balance owing: ${fmtKsh(bal)}`;
+}
+async function commitBulkSold(withBuyer) {
+  const initial = bulkSellableSelected();
+  if (!initial.length) { closeBulkSell(); return; }
+  // Read the chosen model per item from the DOM before we close the modal.
+  const chosen = initial.map(b => {
+    const sel = document.querySelector(`.bsr-size[data-id="${b.id}"]`);
+    const one = document.querySelector(`.bsr-onesize[data-id="${b.id}"]`);
+    return { id: b.id, size: sel ? sel.value : (one ? one.dataset.size : 'One size'), price: bsEffPrice(b) };
+  });
+  const payMethod = document.querySelector('#bulkSellPay .pos-pay-btn.active')?.dataset.pay || 'cash';
+  const buyer = { name: '', phone: '', notes: '' };
+  if (withBuyer) {
+    buyer.name = document.getElementById('bulkSellName').value.trim();
+    buyer.phone = document.getElementById('bulkSellPhone').value.trim().replace(/[^0-9+]/g, '');
+    buyer.notes = document.getElementById('bulkSellNotes').value.trim();
+    if (!buyer.name && !buyer.phone) { showToast('Add a name or phone, or hit Skip.'); return; }
+  }
+  const paidRaw = (document.getElementById('bulkSellPaid').value || '').trim();
+  const hasPartial = withBuyer && paidRaw !== '';
+  closeBulkSell();
+  const soldAt = new Date().toISOString();
+  let soldList = [];
+  try {
+    await apiMutateAndPublish(() => {
+      let remaining = hasPartial ? Math.max(0, parseInt(paidRaw, 10) || 0) : Infinity;
+      soldList = [];
+      for (const ch of chosen) {
+        const bag = bags.find(b => b.id === ch.id);
+        if (!bag) continue;
+        const stock = bag.stock || {};
+        const hasStockObj = Object.keys(stock).length > 0;
+        if (hasStockObj && !(Number(stock[ch.size]) > 0)) continue; // model sold out since the modal opened
+        const total = ch.price; // qty 1
+        const amountPaid = hasPartial ? Math.min(remaining, total) : total;
+        if (hasPartial) remaining = Math.max(0, remaining - amountPaid);
+        const sale = {
+          size: ch.size, qty: 1, salePrice: ch.price, amountPaid,
+          paymentMethod: payMethod, channel: 'shop',
+          buyerName: withBuyer ? buyer.name : '', buyerPhone: withBuyer ? buyer.phone : '',
+          notes: withBuyer ? buyer.notes : '', soldAt,
+        };
+        if (hasStockObj && stock[ch.size] !== undefined) stock[ch.size] = Math.max(0, Number(stock[ch.size]) - 1);
+        if (!bag.sales) bag.sales = [];
+        bag.sales.push(sale);
+        soldList.push({ bag, sale });
+      }
+    });
+    bulkSelected.clear();
+    renderList(); renderDashboard(); renderInventory();
+    if (typeof renderClients === 'function') renderClients();
+    const total = soldList.reduce((s, x) => s + (Number(x.sale.salePrice) || 0), 0);
+    const owed = hasPartial ? Math.max(0, total - Math.max(0, parseInt(paidRaw, 10) || 0)) : 0;
+    showToast(`Sold ${soldList.length} item${soldList.length === 1 ? '' : 's'}${withBuyer && buyer.name ? ' to ' + buyer.name : ''} · ${fmtKsh(total)}${owed > 0 ? ` · ${fmtKsh(owed)} owed` : ''}`);
+    if (withBuyer && buyer.phone && soldList[0]) sendBuyerToGHL(soldList[0].bag, soldList[0].sale);
+  } catch (err) { showToast('Error: ' + err.message); }
+}
+// Existing-customer picker (shared by future single-modal use too).
+function wireCustomerPicker({ searchId, resultsId, nameId, phoneId }) {
+  const search = document.getElementById(searchId);
+  const box = document.getElementById(resultsId);
+  if (!search || !box) return;
+  search.addEventListener('input', () => {
+    const term = search.value.trim().toLowerCase();
+    if (!term) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const digits = term.replace(/[^0-9+]/g, '');
+    const matches = clientsLedger()
+      .filter(c => (c.name || '').toLowerCase().includes(term) || (digits && (c.phone || '').includes(digits)))
+      .sort((a, b) => b.lastAt - a.lastAt)
+      .slice(0, 8);
+    box.innerHTML = matches.length
+      ? matches.map(c => {
+          const meta = `${escapeHtml(c.phone || '')}${c.purchases.length ? ` · ${c.purchases.length} bought` : ''}`;
+          return `<button type="button" class="client-item-opt" data-name="${escapeHtml(c.name || '')}" data-phone="${escapeHtml(c.phone || '')}">${escapeHtml(c.name || '(no name)')}<span>${meta}</span></button>`;
+        }).join('')
+      : '<div class="client-item-empty">No saved customer matches. Type the details below to add a new one.</div>';
+    box.style.display = '';
+  });
+  box.addEventListener('click', e => {
+    const opt = e.target.closest('.client-item-opt');
+    if (!opt) return;
+    document.getElementById(nameId).value = opt.dataset.name || '';
+    document.getElementById(phoneId).value = opt.dataset.phone || '';
+    search.value = opt.dataset.name || opt.dataset.phone || '';
+    box.style.display = 'none';
+    showToast('Customer selected — edit if needed.');
+  });
+}
+wireCustomerPicker({ searchId: 'bulkSellCustSearch', resultsId: 'bulkSellCustResults', nameId: 'bulkSellName', phoneId: 'bulkSellPhone' });
+document.getElementById('bulkSellSaveBtn')?.addEventListener('click', () => commitBulkSold(true));
+document.getElementById('bulkSellSkipBtn')?.addEventListener('click', () => commitBulkSold(false));
+document.getElementById('bulkSellCancelBtn')?.addEventListener('click', closeBulkSell);
+document.getElementById('bulkSellModal')?.addEventListener('click', e => { if (e.target.id === 'bulkSellModal') closeBulkSell(); });
+document.querySelectorAll('#bulkSellPay .pos-pay-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#bulkSellPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b === btn));
+}));
+document.getElementById('bulkSellPaid')?.addEventListener('input', updateBulkSellHint);
+document.getElementById('bulkSellPaidNone')?.addEventListener('click', () => {
+  document.getElementById('bulkSellPaid').value = '0';
+  updateBulkSellHint();
+});
+
 // ====== BULK SALE / MARKDOWN ======
 function roundTo50(n) { return Math.max(50, Math.round(n / 50) * 50); }
 
@@ -1608,7 +1757,9 @@ function renderClients() {
                      : (c.addedAt ? `added ${relTime(c.addedAt)}` : 'no purchases yet');
     const manualTag = c.manualId ? '<span class="client-tag">Added manually</span>' : '';
     const noteLine = c.note ? `<div class="client-note">${escapeHtml(c.note)}</div>` : '';
-    const removeBtn = c.manualId ? `<button class="btn-admin danger" onclick="removeClient('${c.manualId}')">Remove</button>` : '';
+    // Remove only for a manual contact with NO purchases (added by mistake). A
+    // client who has bought is real sales history — no one-tap remove.
+    const removeBtn = (c.manualId && !has) ? `<button class="btn-admin danger" onclick="removeClient('${c.manualId}')">Remove</button>` : '';
     return `
       <div class="client-row">
         <div class="client-row-main">
