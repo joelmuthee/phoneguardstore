@@ -1420,3 +1420,13 @@ html { scroll-behavior: smooth; }
   .rcpt-date { text-align: center; font-size: 10px; margin-top: 6px; }
   .rcpt-foot { text-align: center; margin-top: 8px; font-style: italic; }
 }
+/* Mobile: full-screen modal sheets so tall sale/restock modals fit and the
+   action buttons stay reachable (sticky footer). dvh/svh not vh, so the
+   browser URL bar can't clip the card. 2026-06-07 */
+@media (max-width: 600px) {
+  .modal { padding: 0; align-items: stretch; }
+  .modal-card { max-width: none; border-radius: 0; height: 100svh; height: 100dvh; max-height: 100svh; max-height: 100dvh; padding: 16px 16px 0; }
+  .modal-card h3 { font-size: 19px; line-height: 1.18; }
+  .modal-card .admin-actions { position: sticky; bottom: 0; background: #fff; z-index: 2; margin: 14px -16px 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -7px 14px -9px rgba(0,0,0,0.25); }
+  .bulk-bar { flex-wrap: wrap; }
+}
