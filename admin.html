@@ -17,7 +17,7 @@
 <meta name="theme-color" content="#0d1b2a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=pgs2wrapcapsheetbulksell">
+<link rel="stylesheet" href="styles.css?v=pgsowed">
 <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeDBFwpAAAAAJe8ux9-imrqZ2ueRsEtdiWoDDpX" async defer></script>
 </head>
 <body style="background:#f8f6f2;">
@@ -81,6 +81,7 @@
     <a href="#invDash">Inventory</a>
     <a href="#broadcastDash">WhatsApp Marketing</a>
     <a href="#clientsDash" id="clientsNavLink">Clients <span class="admin-nav-count" id="navClientsCount"></span><span class="admin-nav-new" id="clientsNavNew">NEW</span></a>
+    <a href="#owedDash" id="owedNavLink">Owed <span class="admin-nav-count" id="navOwedCount"></span><span class="admin-nav-new" id="owedNavNew">NEW</span></a>
     <a href="#insightsDash">Insights</a>
     <a href="#allItems">All items <span class="admin-nav-count" id="navItemCount"></span></a>
   </nav>
@@ -104,6 +105,14 @@
           <div class="field"><label>Size</label><select id="posSize"></select></div>
           <div class="field pos-qty"><label>Qty</label><input id="posQty" type="number" min="1" value="1"></div>
           <div class="field"><label>Price (Ksh)</label><input id="posPrice" type="number" min="0"></div>
+        </div>
+        <div class="field">
+          <label>Amount paid now (Ksh) <small style="font-weight:400;color:#999;">leave blank if paid in full</small></label>
+          <div class="paid-row">
+            <input id="posPaid" type="number" min="0" step="50" placeholder="Paid in full">
+            <button type="button" class="btn-paid-none" id="posPaidNone">Not paid yet</button>
+          </div>
+          <p class="paid-hint" id="posPaidHint" style="display:none;"></p>
         </div>
         <div class="field">
           <label>Payment</label>
@@ -237,6 +246,17 @@
       <button class="btn-admin primary" id="clientsAddBtn" type="button">+ Add client</button>
     </div>
     <div id="clientsList" class="clients-list"></div>
+  </section>
+
+  <!-- ====== MONEY OWED ====== -->
+  <section class="dash" id="owedDash">
+    <h2 class="dash-title">Money owed</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin:-8px 0 16px;">Customers who took items but haven't paid in full yet. When you record a sale and they pay less than the price, the rest shows up here so you can keep track and chase it. Record a payment whenever they pay you something.</p>
+    <div class="inv-kpi-grid" id="owedKpiGrid"></div>
+    <div class="clients-controls">
+      <input type="search" id="owedSearch" placeholder="Search by name or phone…" autocomplete="off">
+    </div>
+    <div id="owedList" class="clients-list"></div>
   </section>
 
   <!-- ====== INSIGHTS (per-browser) ====== -->
@@ -479,6 +499,15 @@
     </div>
 
     <div class="field">
+      <label>Amount paid now (Ksh) <small style="font-weight:400;color:#999;">leave blank if paid in full</small></label>
+      <div class="paid-row">
+        <input id="salePaidInput" type="number" min="0" step="50" placeholder="Paid in full">
+        <button type="button" class="btn-paid-none" id="salePaidNone">Not paid yet</button>
+      </div>
+      <p class="paid-hint" id="salePaidHint" style="display:none;"></p>
+    </div>
+
+    <div class="field">
       <label>Payment</label>
       <div class="pos-pay" id="saleModalPay">
         <button type="button" class="pos-pay-btn active" data-pay="cash">💵 Cash</button>
@@ -569,6 +598,29 @@
 </div>
 
 <!-- EDIT SALE MODAL -->
+<!-- RECORD PAYMENT MODAL (pay down a customer's balance) -->
+<div id="payDebtModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3>Record a payment</h3>
+    <p class="sub"><strong id="payDebtName"></strong> owes <strong id="payDebtOwed"></strong>. Enter how much they've just paid you.</p>
+    <div class="field">
+      <label>Amount paid (Ksh)</label>
+      <input id="payDebtAmount" type="number" min="0" step="50">
+    </div>
+    <div class="field">
+      <label>Paid by</label>
+      <div class="pos-pay" id="payDebtPay">
+        <button type="button" class="pos-pay-btn" data-pay="cash">💵 Cash</button>
+        <button type="button" class="pos-pay-btn active" data-pay="mpesa">📱 M-Pesa</button>
+      </div>
+    </div>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin gold" id="payDebtSaveBtn">Record payment</button>
+      <button class="btn-admin" id="payDebtCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="editSaleModal" class="modal" style="display:none;">
   <div class="modal-card">
     <h3 id="editSaleTitle">Edit sale</h3>
@@ -704,6 +756,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=20260606buypricebulksell"></script>
+<script src="admin.js?v=pgsowed"></script>
 </body>
 </html>

@@ -751,6 +751,9 @@ function openSaleModal(id) {
   saleQtyInput.value = 1;
   // Default to the markdown price if the item is on sale, so the recorded sale captures the discount.
   salePriceInput.value = (bag.salePrice > 0 && bag.salePrice < bag.price) ? bag.salePrice : bag.price;
+  const _sp = document.getElementById('salePaidInput'); if (_sp) _sp.value = '';
+  const _sph = document.getElementById('salePaidHint'); if (_sph) _sph.style.display = 'none';
+  document.getElementById('salePaidNone')?.classList.remove('active');
   buyerName.value = '';
   buyerPhone.value = '';
   buyerNotes.value = '';
@@ -769,11 +772,18 @@ async function recordSale(withBuyer) {
   const size = saleSizeInput.value;
   const qty = parseInt(saleQtyInput.value, 10) || 1;
   const salePrice = parseInt(salePriceInput.value, 10) || curBag.price;
+  const saleTotalAmt = salePrice * qty;
+  let amountPaid = saleTotalAmt;
+  if (withBuyer) {
+    const paidRaw = (document.getElementById('salePaidInput')?.value || '').trim();
+    amountPaid = paidRaw === '' ? saleTotalAmt : Math.min(saleTotalAmt, Math.max(0, parseInt(paidRaw, 10) || 0));
+  }
   const payMethod = document.querySelector('#saleModalPay .pos-pay-btn.active')?.dataset.pay || 'cash';
   const sale = {
     size,
     qty,
     salePrice,
+    amountPaid,
     paymentMethod: payMethod,
     channel: 'shop',
     buyerName: withBuyer ? buyerName.value.trim() : '',
@@ -801,7 +811,7 @@ async function recordSale(withBuyer) {
     showToast(`Sale recorded — ${qty}× ${size} sold.`);
     if (withBuyer && (sale.buyerName || sale.buyerPhone)) sendBuyerToGHL(soldBag, sale);
     // Offer a receipt (same panel the Sell-in-store flow uses).
-    lastPosSale = { name: soldBag ? soldBag.name : '', size, qty, amount: salePrice, paymentMethod: sale.paymentMethod, buyerName: sale.buyerName, buyerPhone: sale.buyerPhone, soldAt: sale.soldAt };
+    lastPosSale = { name: soldBag ? soldBag.name : '', size, qty, amount: salePrice, paid: amountPaid, balance: saleTotalAmt - amountPaid, paymentMethod: sale.paymentMethod, buyerName: sale.buyerName, buyerPhone: sale.buyerPhone, soldAt: sale.soldAt };
     showPosReceipt(lastPosSale);
     document.getElementById('posDash').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) { showToast('Error: ' + err.message); }
@@ -999,6 +1009,8 @@ function itemAddedAt(bag) {
   const m = String(bag.id || '').match(/_(\d{10,})/);
   return m ? new Date(parseInt(m[1], 10)).toISOString() : null;
 }
+
+function fmtDate(iso) { return new Date(iso).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
 function renderDashboard() {
   const now = new Date();
@@ -1447,6 +1459,7 @@ async function commitBulkSold(withBuyer) {
     bulkSelected.clear();
     renderList(); renderDashboard(); renderInventory();
     if (typeof renderClients === 'function') renderClients();
+    if (typeof renderOwed === 'function') renderOwed();
     const total = soldList.reduce((s, x) => s + (Number(x.sale.salePrice) || 0), 0);
     const owed = hasPartial ? Math.max(0, total - Math.max(0, parseInt(paidRaw, 10) || 0)) : 0;
     showToast(`Sold ${soldList.length} item${soldList.length === 1 ? '' : 's'}${withBuyer && buyer.name ? ' to ' + buyer.name : ''} · ${fmtKsh(total)}${owed > 0 ? ` · ${fmtKsh(owed)} owed` : ''}`);
@@ -1783,6 +1796,7 @@ document.getElementById('addClientSaveBtn')?.addEventListener('click', async () 
     });
     closeAddClient();
     renderClients(); renderDashboard(); renderInventory(); renderList();
+    if (typeof renderOwed === 'function') renderOwed();
     showToast(itemId ? 'Client saved + sale recorded.' : 'Client saved.');
   } catch (e) { showToast('Save failed: ' + e.message); }
   finally { btn.disabled = false; }
@@ -1799,6 +1813,198 @@ document.getElementById('clientsSearch')?.addEventListener('input', e => { clien
 document.getElementById('clientsSort')?.addEventListener('change', e => { clientsSort = e.target.value; renderClients(); });
 // "NEW" badge on the Clients nav link — kept permanently visible (owner asked
 // for it to always show). No auto-dismiss; the badge renders from the HTML/CSS.
+
+// ====== MONEY OWED — customer balances (buying on credit / pay later) ======
+// A sale's amountPaid is the cash taken at the time of sale; later part-payments
+// are appended to sale.payments[]. Any sale recorded before this feature has no
+// amountPaid, so it reads as paid in full — old data is never shown as owing.
+function saleTotal(bag, s) { return (Number(s.salePrice != null ? s.salePrice : bag.price) || 0) * (Number(s.qty) || 1); }
+function salePaid(bag, s) {
+  const total = saleTotal(bag, s);
+  const initial = (s.amountPaid != null) ? Math.max(0, Number(s.amountPaid) || 0) : total;
+  const extra = (s.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  return Math.min(total, initial + extra);
+}
+function saleBalance(bag, s) { return Math.max(0, saleTotal(bag, s) - salePaid(bag, s)); }
+
+function owedByPhone() {
+  const m = {};
+  for (const bag of bags) for (const s of (bag.sales || [])) {
+    const bal = saleBalance(bag, s);
+    if (bal <= 0) continue;
+    const phone = String(s.buyerPhone || '').replace(/[^0-9]/g, '');
+    if (phone.length < 9) continue;
+    m[phone] = (m[phone] || 0) + bal;
+  }
+  return m;
+}
+
+function owedLedger() {
+  const map = new Map();
+  for (const bag of bags) {
+    for (const s of (bag.sales || [])) {
+      const bal = saleBalance(bag, s);
+      if (bal <= 0) continue;
+      const phone = String(s.buyerPhone || '').replace(/[^0-9]/g, '');
+      const hasPhone = phone.length >= 9;
+      const key = hasPhone ? phone : '__nophone__';
+      let c = map.get(key);
+      if (!c) { c = { phone: hasPhone ? phone : '', name: '', owed: 0, lines: [], _lastAt: 0 }; map.set(key, c); }
+      c.owed += bal;
+      c.lines.push({ bagId: bag.id, soldAt: s.soldAt, bagName: bag.name, size: s.size || '', total: saleTotal(bag, s), balance: bal, at: s.soldAt, notes: s.notes || '' });
+      const at = new Date(s.soldAt || 0).getTime();
+      if (s.buyerName && at >= c._lastAt) { c.name = s.buyerName; c._lastAt = at; }
+      else if (!c.name && s.buyerName) c.name = s.buyerName;
+    }
+  }
+  return [...map.values()];
+}
+
+let owedQuery = '';
+function renderOwed() {
+  const listEl = document.getElementById('owedList');
+  if (!listEl) return;
+  const ledger = owedLedger();
+  const totalOwed = ledger.reduce((s, c) => s + c.owed, 0);
+  const withPhone = ledger.filter(c => c.phone);
+  let oldest = null;
+  ledger.forEach(c => c.lines.forEach(l => { const t = new Date(l.at || 0).getTime(); if (t && (oldest === null || t < oldest)) oldest = t; }));
+
+  const nav = document.getElementById('navOwedCount'); if (nav) nav.textContent = ledger.length || '';
+  const navLink = document.getElementById('owedNavLink'); if (navLink) navLink.classList.toggle('admin-nav-owed-on', totalOwed > 0);
+
+  const kpi = document.getElementById('owedKpiGrid');
+  if (kpi) kpi.innerHTML = `
+    <div class="inv-kpi danger"><div class="inv-kpi-label">Total owed to you</div><div class="inv-kpi-val">${fmtKsh(totalOwed)}</div><div class="inv-kpi-sub">across ${ledger.length} customer${ledger.length === 1 ? '' : 's'}</div></div>
+    <div class="inv-kpi"><div class="inv-kpi-label">Customers owing</div><div class="inv-kpi-val">${ledger.length}</div><div class="inv-kpi-sub">${withPhone.length} with a phone saved</div></div>
+    <div class="inv-kpi"><div class="inv-kpi-label">Oldest balance</div><div class="inv-kpi-val">${oldest ? relTime(new Date(oldest).toISOString()) : '—'}</div><div class="inv-kpi-sub">${oldest ? 'taken ' + fmtDate(new Date(oldest).toISOString()) : 'since the item was taken'}</div></div>
+  `;
+
+  if (!ledger.length) {
+    listEl.innerHTML = '<p style="font-size:13px;color:#999;padding:14px;">No one owes you right now. When you record a sale and the customer pays less than the full price, the balance shows up here so you can chase it.</p>';
+    return;
+  }
+  const q = owedQuery.toLowerCase();
+  const rows = ledger
+    .filter(c => !q || (c.name || '').toLowerCase().includes(q) || c.phone.includes(q))
+    .sort((a, b) => b.owed - a.owed);
+  if (!rows.length) { listEl.innerHTML = '<p style="font-size:13px;color:#999;padding:14px;">No customers match your search.</p>'; return; }
+  listEl.innerHTML = rows.map(c => {
+    const items = c.lines.slice().sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0))
+      .map(l => `<span class="owed-line">${escapeHtml(l.bagName)}${l.size ? ' · ' + escapeHtml(l.size) : ''} · owes ${fmtKsh(l.balance)} of ${fmtKsh(l.total)} · taken ${fmtDate(l.at)} (${relTime(l.at)})${l.notes ? ` · <em>${escapeHtml(l.notes)}</em>` : ''}</span>`).join('');
+    const noPhone = !c.phone;
+    const title = noPhone ? 'Buyer not saved' : (c.name || 'Unnamed customer');
+    const sub = noPhone
+      ? `${c.lines.length} item${c.lines.length === 1 ? '' : 's'} on credit · no phone saved`
+      : `${escapeHtml(c.phone)} · ${c.lines.length} item${c.lines.length === 1 ? '' : 's'} on credit`;
+    const noteLine = noPhone ? '<div class="client-note">Add this customer\'s phone (Edit the sale in Recent sales) so you can track and collect it.</div>' : '';
+    const actions = noPhone ? '' : `
+          <button class="btn-admin gold" onclick="openPayDebt('${c.phone}')">Record payment</button>
+          <button class="btn-admin" onclick="remindDebt('${c.phone}')">Remind</button>`;
+    return `
+      <div class="client-row owed-row">
+        <div class="client-row-main">
+          <div class="client-row-name">${escapeHtml(title)} <span class="owed-amount">owes ${fmtKsh(c.owed)}</span></div>
+          <div class="client-row-sub">${sub}</div>
+          ${noteLine}
+          <div class="owed-lines">${items}</div>
+          <div class="owed-total">Total owing: <span class="owed-amount">${fmtKsh(c.owed)}</span></div>
+        </div>
+        <div class="client-row-actions">${actions}</div>
+      </div>`;
+  }).join('');
+}
+document.getElementById('owedSearch')?.addEventListener('input', e => { owedQuery = e.target.value.trim(); renderOwed(); });
+
+// ----- Record a payment against a customer's balance (oldest debt first) -----
+let payingPhone = '';
+function openPayDebt(phone) {
+  const c = owedLedger().find(x => x.phone === phone);
+  if (!c) return;
+  payingPhone = phone;
+  document.getElementById('payDebtName').textContent = c.name || c.phone;
+  document.getElementById('payDebtOwed').textContent = fmtKsh(c.owed);
+  document.getElementById('payDebtAmount').value = c.owed;
+  document.querySelectorAll('#payDebtPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'mpesa'));
+  document.getElementById('payDebtModal').style.display = 'flex';
+  document.getElementById('payDebtAmount').focus();
+}
+window.openPayDebt = openPayDebt;
+function closePayDebt() { document.getElementById('payDebtModal').style.display = 'none'; payingPhone = ''; }
+document.getElementById('payDebtCancelBtn')?.addEventListener('click', closePayDebt);
+document.getElementById('payDebtModal')?.addEventListener('click', e => { if (e.target.id === 'payDebtModal') closePayDebt(); });
+document.getElementById('payDebtPay')?.addEventListener('click', e => { const b = e.target.closest('.pos-pay-btn'); if (!b) return; document.querySelectorAll('#payDebtPay .pos-pay-btn').forEach(x => x.classList.toggle('active', x === b)); });
+document.getElementById('payDebtSaveBtn')?.addEventListener('click', async () => {
+  const phone = payingPhone;
+  const amount = parseInt(document.getElementById('payDebtAmount').value, 10);
+  const method = document.querySelector('#payDebtPay .pos-pay-btn.active')?.dataset.pay || 'mpesa';
+  if (!phone) return;
+  if (isNaN(amount) || amount <= 0) { showToast('Enter how much they paid.'); return; }
+  closePayDebt();
+  const at = new Date().toISOString();
+  try {
+    let applied = 0;
+    await apiMutateAndPublish(() => {
+      const lines = [];
+      for (const bag of bags) for (const s of (bag.sales || [])) {
+        if (String(s.buyerPhone || '').replace(/[^0-9]/g, '') !== phone) continue;
+        if (saleBalance(bag, s) > 0) lines.push({ bag, s });
+      }
+      lines.sort((a, b) => new Date(a.s.soldAt || 0) - new Date(b.s.soldAt || 0));
+      let remaining = amount;
+      for (const { bag, s } of lines) {
+        if (remaining <= 0) break;
+        const pay = Math.min(saleBalance(bag, s), remaining);
+        if (pay <= 0) continue;
+        if (!s.payments) s.payments = [];
+        s.payments.push({ amount: pay, at, method });
+        remaining -= pay; applied += pay;
+      }
+    });
+    renderOwed(); renderClients(); renderDashboard();
+    showToast(applied > 0 ? `Payment of ${fmtKsh(applied)} recorded.` : 'That balance is already cleared.');
+  } catch (e) { showToast('Error: ' + e.message); }
+});
+window.remindDebt = phone => {
+  const c = owedLedger().find(x => x.phone === phone);
+  if (!c) return;
+  const first = (c.name || 'there').split(' ')[0];
+  const n = c.lines.length;
+  const list = c.lines.map((l, i) => `${i + 1}. *${l.bagName}*${l.size ? ' (' + l.size + ')' : ''}\n    Taken ${fmtDate(l.at)} · balance ${fmtKsh(l.balance)}`).join('\n');
+  const intro = n === 1
+    ? `A friendly reminder about your balance on the item you took from Phone Guard Store:`
+    : `A friendly reminder about the ${n} items you took from Phone Guard Store that still have a balance:`;
+  const msg = `Hi ${first}, hope you're doing well.\n\n${intro}\n\n${list}\n\n*Total still owing: ${fmtKsh(c.owed)}*\nYou can pay via M-Pesa whenever you're ready. Thank you!`;
+  window.open(`https://wa.me/${clientWaPhone(phone)}?text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+// Live "balance owing" hint + "Not paid yet" pill sync, on both sale paths.
+function paidHint(priceEl, qtyEl, paidEl, hintEl) {
+  const total = (parseInt(priceEl.value, 10) || 0) * (parseInt(qtyEl.value, 10) || 1);
+  const raw = (paidEl.value || '').trim();
+  if (raw === '') { hintEl.style.display = 'none'; return; }
+  const bal = total - Math.min(total, Math.max(0, parseInt(raw, 10) || 0));
+  hintEl.style.display = bal > 0 ? '' : 'none';
+  if (bal > 0) hintEl.textContent = `Balance owing: ${fmtKsh(bal)}`;
+}
+function syncPaid(priceId, qtyId, paidId, hintId, btnId) {
+  const paidEl = document.getElementById(paidId);
+  paidHint(document.getElementById(priceId), document.getElementById(qtyId), paidEl, document.getElementById(hintId));
+  const btn = document.getElementById(btnId);
+  if (btn) btn.classList.toggle('active', (paidEl.value || '').trim() === '0');
+}
+['salePaidInput', 'salePriceInput', 'saleQtyInput'].forEach(id => document.getElementById(id)?.addEventListener('input',
+  () => syncPaid('salePriceInput', 'saleQtyInput', 'salePaidInput', 'salePaidHint', 'salePaidNone')));
+['posPaid', 'posPrice', 'posQty'].forEach(id => document.getElementById(id)?.addEventListener('input',
+  () => syncPaid('posPrice', 'posQty', 'posPaid', 'posPaidHint', 'posPaidNone')));
+document.getElementById('salePaidNone')?.addEventListener('click', () => {
+  document.getElementById('salePaidInput').value = '0';
+  syncPaid('salePriceInput', 'saleQtyInput', 'salePaidInput', 'salePaidHint', 'salePaidNone');
+});
+document.getElementById('posPaidNone')?.addEventListener('click', () => {
+  document.getElementById('posPaid').value = '0';
+  syncPaid('posPrice', 'posQty', 'posPaid', 'posPaidHint', 'posPaidNone');
+});
 
 // ====== WHATSAPP BROADCAST ======
 let broadcastSelectedIds = [];
@@ -2325,6 +2531,7 @@ async function init() {
   renderBroadcastRecipients();
   renderBroadcastPreview();
   renderClients();
+  if (typeof renderOwed === 'function') renderOwed();
   renderInsights();
   initNavScrollSpy();
 }
@@ -2412,7 +2619,9 @@ function posSelectItem(id) {
 
 function posReset() {
   posItemId = ''; posPayMethod = 'cash';
-  ['posItemSearch', 'posBuyerName', 'posBuyerPhone'].forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; });
+  ['posItemSearch', 'posBuyerName', 'posBuyerPhone', 'posPaid'].forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; });
+  const _ph = document.getElementById('posPaidHint'); if (_ph) _ph.style.display = 'none';
+  document.getElementById('posPaidNone')?.classList.remove('active');
   document.getElementById('posItemResults').style.display = 'none';
   document.getElementById('posChosen').style.display = 'none';
   document.getElementById('posSaleFields').style.display = 'none';
@@ -2478,26 +2687,30 @@ async function recordPosSale() {
   const soldAt = new Date().toISOString();
   const btn = document.getElementById('posRecordBtn'); btn.disabled = true;
   try {
-    let soldName = '', amount = 0;
+    let soldName = '', amount = 0, posAmountPaid = 0;
     await apiMutateAndPublish(() => {
       const bag = bags.find(b => b.id === targetId);
       if (!bag) throw new Error('Item no longer exists — refresh admin');
       amount = isNaN(priceRaw) ? (bag.price || 0) : priceRaw;
+      const _posTotal = amount * qty;
+      const _posPaidRaw = (document.getElementById('posPaid')?.value || '').trim();
+      posAmountPaid = _posPaidRaw === '' ? _posTotal : Math.min(_posTotal, Math.max(0, parseInt(_posPaidRaw, 10) || 0));
       if (bag.stock && bag.stock[size] !== undefined) bag.stock[size] = Math.max(0, bag.stock[size] - qty);
       if (!bag.sales) bag.sales = [];
-      bag.sales.push({ size, qty, salePrice: amount, paymentMethod: posPayMethod, channel: 'shop', buyerName: name, buyerPhone: phone, notes: '', soldAt });
+      bag.sales.push({ size, qty, salePrice: amount, amountPaid: posAmountPaid, paymentMethod: posPayMethod, channel: 'shop', buyerName: name, buyerPhone: phone, notes: '', soldAt });
       soldName = bag.name;
       if (phone.replace(/[^0-9]/g, '').length >= 9) {
         if (!Array.isArray(clients)) clients = [];
         const norm = phone.replace(/[^0-9]/g, '');
         const existing = clients.find(c => String(c.phone).replace(/[^0-9]/g, '') === norm);
         if (existing) { if (name) existing.name = name; }
-        else clients.push({ id: 'c_' + Date.now(), name: name || '', phone, note: 'Walk-in (in-store)', createdAt: soldAt });
+        else clients.push({ id: 'c_' + Date.now(), name: name || '', phone, note: '', createdAt: soldAt });
       }
     });
-    lastPosSale = { name: soldName, size, qty, amount, paymentMethod: posPayMethod, buyerName: name, buyerPhone: phone, soldAt };
+    lastPosSale = { name: soldName, size, qty, amount, paid: posAmountPaid, balance: (amount * qty) - posAmountPaid, paymentMethod: posPayMethod, buyerName: name, buyerPhone: phone, soldAt };
     renderList(); renderDashboard(); renderInventory();
     if (typeof renderClients === 'function') renderClients();
+    if (typeof renderOwed === 'function') renderOwed();
     showPosReceipt(lastPosSale);
     showToast(`Sold ${qty}× ${size} · ${fmtKsh(amount * qty)}`);
   } catch (e) { showToast('Error: ' + e.message); }

@@ -1444,3 +1444,24 @@ html { scroll-behavior: smooth; }
   .modal-card .admin-actions { position: sticky; bottom: 0; background: #fff; z-index: 2; margin: 14px -16px 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -7px 14px -9px rgba(0,0,0,0.25); }
   .bulk-bar { flex-wrap: wrap; }
 }
+
+/* ===== Money owed (customer balances) ===== */
+.pos-chip.owed { background: #fff5f5; border-color: #f0c2c2; color: #b3301f; }
+.owed-amount { color: #b3301f; font-weight: 700; }
+.owed-tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: #b3301f; background: #fff0ee; border: 1px solid #f0c2c2; border-radius: 5px; padding: 0 6px; vertical-align: middle; }
+.owed-row { border-left: 3px solid #e05050; }
+.owed-lines { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.owed-line { font-size: 12px; color: #6b5b3a; background: #faf6ec; border: 1px solid #e8dcbf; border-radius: 8px; padding: 5px 10px; line-height: 1.45; overflow-wrap: anywhere; }
+.owed-line em { color: var(--ink-soft, #6b5b48); }
+.owed-total { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0d3b6; font-weight: 700; font-size: 13.5px; color: var(--ink, #2a1d10); }
+.admin-nav a.admin-nav-owed-on { background: #fff0ee; color: #b3301f; border-color: #f0c2c2; }
+.paid-hint { font-size: 12px; color: #b3301f; margin: 5px 0 0; font-weight: 600; }
+.paid-row { display: flex; gap: 8px; align-items: stretch; }
+.paid-row input { flex: 1; min-width: 0; }
+.btn-paid-none { flex: 0 0 auto; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; padding: 0 16px; border-radius: 8px; color: #b3301f; background: #fff5f5; border: 1px solid #f0c2c2; transition: background .15s, color .15s, border-color .15s, box-shadow .15s; }
+.btn-paid-none::before { content: ""; width: 13px; height: 13px; border-radius: 50%; border: 2px solid currentColor; box-sizing: border-box; flex: 0 0 auto; transition: background .15s, box-shadow .15s; }
+.btn-paid-none:hover { background: #ffe8e6; border-color: #e7a9a3; }
+.btn-paid-none.active { background: #b3301f; color: #fff; border-color: #b3301f; box-shadow: 0 2px 8px rgba(179,48,31,0.28); }
+.btn-paid-none.active::before { background: #fff; box-shadow: inset 0 0 0 3px #b3301f; }
+.clients-controls #owedSearch { flex: 1; min-width: 180px; padding: 10px 14px; border: 1px solid var(--line, #e6dcc8); border-radius: 10px; font-size: 14px; background: #fff; }
+.clients-controls #owedSearch:focus { outline: none; border-color: var(--gold, #a88847); }
