@@ -779,6 +779,9 @@ async function recordSale(withBuyer) {
     amountPaid = paidRaw === '' ? saleTotalAmt : Math.min(saleTotalAmt, Math.max(0, parseInt(paidRaw, 10) || 0));
   }
   const payMethod = document.querySelector('#saleModalPay .pos-pay-btn.active')?.dataset.pay || 'cash';
+  if (withBuyer && (saleTotalAmt - amountPaid) > 0 && buyerPhone.value.replace(/[^0-9]/g, '').length < 9) {
+    if (!await confirmAction("No phone saved for this customer. Without a phone you can't track or collect this balance under their name. Save the sale anyway?", 'Save anyway')) return;
+  }
   const sale = {
     size,
     qty,
@@ -2685,6 +2688,13 @@ async function recordPosSale() {
   const name = document.getElementById('posBuyerName').value.trim();
   const phone = document.getElementById('posBuyerPhone').value.trim().replace(/[^0-9+]/g, '');
   const soldAt = new Date().toISOString();
+  const _bag = bags.find(b => b.id === targetId);
+  const _amt = isNaN(priceRaw) ? (_bag?.price || 0) : priceRaw;
+  const _paidRaw = (document.getElementById('posPaid')?.value || '').trim();
+  const _paid = _paidRaw === '' ? (_amt * qty) : Math.min(_amt * qty, Math.max(0, parseInt(_paidRaw, 10) || 0));
+  if ((_amt * qty - _paid) > 0 && phone.replace(/[^0-9]/g, '').length < 9) {
+    if (!await confirmAction("No phone saved for this customer. Without a phone you can't track or collect this balance under their name. Save the sale anyway?", 'Save anyway')) return;
+  }
   const btn = document.getElementById('posRecordBtn'); btn.disabled = true;
   try {
     let soldName = '', amount = 0, posAmountPaid = 0;
