@@ -921,7 +921,7 @@ html { scroll-behavior: smooth; }
 .admin-form h2 { font-family: var(--serif); font-size: 24px; margin-bottom: 18px; }
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
-.field input[type="text"], .field input[type="number"], .field input[type="url"], .field input[type="tel"], .field input[type="search"], .field textarea, .field select {
+.field input[type="text"], .field input[type="number"], .field input[type="url"], .field input[type="tel"], .field input[type="search"], .field input[type="password"], .field input[type="email"], .field textarea, .field select {
   width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 14px; background: #fff; color: var(--ink);
 }
 .field textarea { resize: vertical; min-height: 80px; }
