@@ -41,6 +41,7 @@
     <h1>Phone Guard Store Admin</h1>
     <div class="admin-actions">
       <a class="btn-admin" href="index.html" target="_blank">View store →</a>
+      <button class="btn-admin" id="changePasswordBtn" type="button">🔑 Change password</button>
       <button class="btn-admin danger" id="logoutBtn">Logout</button>
     </div>
   </div>
@@ -598,6 +599,31 @@
 </div>
 
 <!-- EDIT SALE MODAL -->
+<!-- CHANGE PASSWORD MODAL -->
+<div id="changePasswordModal" class="modal" style="display:none;">
+  <div class="modal-card">
+    <h3>Change your password</h3>
+    <p class="sub">Pick a new password for signing in to this admin. Minimum 8 characters. The new one takes effect the next time you sign in.</p>
+    <div class="field">
+      <label>Current password</label>
+      <input id="cpCurrent" type="password" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label>New password <small style="font-weight:400;color:#999;">at least 8 characters</small></label>
+      <input id="cpNew" type="password" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label>Confirm new password</label>
+      <input id="cpConfirm" type="password" autocomplete="new-password">
+    </div>
+    <p id="cpError" style="color:#b00020;font-size:13px;display:none;margin:8px 0 0;"></p>
+    <div class="admin-actions" style="margin-top:18px;">
+      <button class="btn-admin primary" id="cpSaveBtn">Change password</button>
+      <button class="btn-admin" id="cpCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- RECORD PAYMENT MODAL (pay down a customer's balance) -->
 <div id="payDebtModal" class="modal" style="display:none;">
   <div class="modal-card">
@@ -756,6 +782,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=pgsowed2"></script>
+<script src="admin.js?v=pgscp"></script>
 </body>
 </html>

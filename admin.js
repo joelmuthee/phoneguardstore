@@ -56,6 +56,60 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   location.reload();
 });
 
+// ====== CHANGE PASSWORD ======
+document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
+  const m = document.getElementById('changePasswordModal');
+  if (!m) return;
+  m.style.display = 'flex';
+  ['cpCurrent', 'cpNew', 'cpConfirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('cpError').style.display = 'none';
+  document.getElementById('cpCurrent')?.focus();
+});
+function _closeChangePassword() { const m = document.getElementById('changePasswordModal'); if (m) m.style.display = 'none'; }
+document.getElementById('cpCancelBtn')?.addEventListener('click', _closeChangePassword);
+document.getElementById('changePasswordModal')?.addEventListener('click', e => { if (e.target.id === 'changePasswordModal') _closeChangePassword(); });
+document.getElementById('cpSaveBtn')?.addEventListener('click', async () => {
+  const cur = document.getElementById('cpCurrent').value;
+  const nw = document.getElementById('cpNew').value;
+  const cf = document.getElementById('cpConfirm').value;
+  const err = document.getElementById('cpError');
+  err.style.display = 'none';
+  if (!cur) { err.textContent = 'Enter your current password.'; err.style.display = 'block'; return; }
+  if (nw.length < 8) { err.textContent = 'New password must be at least 8 characters.'; err.style.display = 'block'; return; }
+  if (nw !== cf) { err.textContent = 'New password and confirmation do not match.'; err.style.display = 'block'; return; }
+  const btn = document.getElementById('cpSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    // Verify the current password (server-side: stored hash OR agency master), with an offline fallback.
+    let curOk = false;
+    try {
+      const cr = await fetch(`${API_BASE}/api/check-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: cur }),
+      });
+      curOk = !!(await cr.json()).ok;
+    } catch (_) {}
+    if (!curOk && cur === ADMIN_PASSWORD) curOk = true;
+    if (!curOk) { err.textContent = 'Current password is wrong.'; err.style.display = 'block'; return; }
+    // Set the new password (SHA-256 hashed server-side under KV "adminpass").
+    const res = await fetch(`${API_BASE}/api/set-password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ADMIN_TOKEN}` },
+      body: JSON.stringify({ password: nw }),
+    });
+    const j = await res.json();
+    if (j.ok) {
+      _closeChangePassword();
+      showToast('Password changed. You stay signed in; the new password takes effect on next login.');
+    } else {
+      err.textContent = j.error || 'Could not change password.'; err.style.display = 'block';
+    }
+  } catch (e) {
+    err.textContent = 'Network error: ' + (e.message || e); err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Change password';
+  }
+});
+
 // ====== API ======
 // Billing kill-switch: when the store is suspended the owner can still VIEW the
 // admin but every write is frozen. The worker is the real gate (403); these
