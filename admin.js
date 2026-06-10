@@ -75,7 +75,7 @@ document.getElementById('cpSaveBtn')?.addEventListener('click', async () => {
   const err = document.getElementById('cpError');
   err.style.display = 'none';
   if (!cur) { err.textContent = 'Enter your current password.'; err.style.display = 'block'; return; }
-  if (nw.length < 8) { err.textContent = 'New password must be at least 8 characters.'; err.style.display = 'block'; return; }
+  if (nw.length < 5) { err.textContent = 'New password must be at least 5 characters.'; err.style.display = 'block'; return; }
   if (nw !== cf) { err.textContent = 'New password and confirmation do not match.'; err.style.display = 'block'; return; }
   const btn = document.getElementById('cpSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
