@@ -811,7 +811,7 @@ function openSaleModal(id) {
   buyerName.value = '';
   buyerPhone.value = '';
   buyerNotes.value = '';
-  document.querySelectorAll('#saleModalPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'cash'));
+  document.querySelectorAll('#saleModalPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'mpesa'));
   saleModal.style.display = 'flex';
   buyerName.focus();
 }
@@ -832,7 +832,7 @@ async function recordSale(withBuyer) {
     const paidRaw = (document.getElementById('salePaidInput')?.value || '').trim();
     amountPaid = paidRaw === '' ? saleTotalAmt : Math.min(saleTotalAmt, Math.max(0, parseInt(paidRaw, 10) || 0));
   }
-  const payMethod = document.querySelector('#saleModalPay .pos-pay-btn.active')?.dataset.pay || 'cash';
+  const payMethod = document.querySelector('#saleModalPay .pos-pay-btn.active')?.dataset.pay || 'mpesa';
   if (withBuyer && (saleTotalAmt - amountPaid) > 0 && buyerPhone.value.replace(/[^0-9]/g, '').length < 9) {
     if (!await confirmAction("No phone saved for this customer. Without a phone you can't track or collect this balance under their name. Save the sale anyway?", 'Save anyway')) return;
   }
@@ -1453,7 +1453,7 @@ window.bulkSell = () => {
   document.getElementById('bulkSellPaidHint').style.display = 'none';
   document.getElementById('bulkSellPaidNone').classList.remove('active');
   const cr = document.getElementById('bulkSellCustResults'); if (cr) { cr.style.display = 'none'; cr.innerHTML = ''; }
-  document.querySelectorAll('#bulkSellPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'cash'));
+  document.querySelectorAll('#bulkSellPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'mpesa'));
   document.getElementById('bulkSellModal').style.display = 'flex';
 };
 function closeBulkSell() { document.getElementById('bulkSellModal').style.display = 'none'; }
@@ -1475,7 +1475,7 @@ async function commitBulkSold(withBuyer) {
     const one = document.querySelector(`.bsr-onesize[data-id="${b.id}"]`);
     return { id: b.id, size: sel ? sel.value : (one ? one.dataset.size : 'One size'), price: bsEffPrice(b) };
   });
-  const payMethod = document.querySelector('#bulkSellPay .pos-pay-btn.active')?.dataset.pay || 'cash';
+  const payMethod = document.querySelector('#bulkSellPay .pos-pay-btn.active')?.dataset.pay || 'mpesa';
   const buyer = { name: '', phone: '', notes: '' };
   if (withBuyer) {
     buyer.name = document.getElementById('bulkSellName').value.trim();
@@ -2301,7 +2301,7 @@ function renderBroadcastStepper() {
     return;
   }
   const r = bcQueue[bcIdx];
-  const href = `https://wa.me/${r.phone}?text=${encodeURIComponent(buildBroadcastMessage(r.name))}`;
+  const href = `https://wa.me/${clientWaPhone(r.phone)}?text=${encodeURIComponent(buildBroadcastMessage(r.name))}`;
   el.style.display = 'block';
   el.innerHTML = `
     <div class="bc-step-head">Sending ${bcIdx + 1} of ${bcQueue.length}</div>
@@ -2351,7 +2351,7 @@ document.getElementById('broadcastStartBtn')?.addEventListener('click', async ()
     }
     const r = recipients[i++];
     const msg = buildBroadcastMessage(r.name);
-    window.open(`https://wa.me/${r.phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    window.open(`https://wa.me/${clientWaPhone(r.phone)}?text=${encodeURIComponent(msg)}`, '_blank');
     document.getElementById('broadcastStatus').textContent = `Opening ${i} of ${recipients.length}…`;
     setTimeout(next, 700);
   }
@@ -2630,7 +2630,7 @@ function initNavScrollSpy() {
 // pushes a sales[] entry tagged { paymentMethod, channel:'shop' } so it shows in
 // the Sales dashboard + the Cash/M-Pesa "today" split.
 let posItemId = '';
-let posPayMethod = 'cash';
+let posPayMethod = 'mpesa';
 let lastPosSale = null;
 
 function posWaPhone(p) {
@@ -2675,7 +2675,7 @@ function posSelectItem(id) {
 }
 
 function posReset() {
-  posItemId = ''; posPayMethod = 'cash';
+  posItemId = ''; posPayMethod = 'mpesa';
   ['posItemSearch', 'posBuyerName', 'posBuyerPhone', 'posPaid'].forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; });
   const _ph = document.getElementById('posPaidHint'); if (_ph) _ph.style.display = 'none';
   document.getElementById('posPaidNone')?.classList.remove('active');
@@ -2684,7 +2684,7 @@ function posReset() {
   document.getElementById('posSaleFields').style.display = 'none';
   document.getElementById('posReceiptPanel').style.display = 'none';
   document.getElementById('posCustomerFields').style.display = '';
-  document.querySelectorAll('#posPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'cash'));
+  document.querySelectorAll('#posPay .pos-pay-btn').forEach(b => b.classList.toggle('active', b.dataset.pay === 'mpesa'));
 }
 
 function posReceiptText(s) {
