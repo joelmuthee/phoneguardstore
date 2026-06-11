@@ -408,6 +408,7 @@ document.getElementById('igQuickBtn')?.addEventListener('click', async () => {
 
     stagedInstagramUrl = data.postUrl;
     status.textContent = '✓ Image and caption loaded. Review the name, category, price and stock, then Save.';
+    { const _me = document.getElementById('manualEntry'); if (_me) _me.open = true; }
     status.className = 'ig-quick-status ok';
   } catch (err) {
     status.textContent = '✗ ' + err.message + ' — paste image and write description manually instead.';
@@ -721,6 +722,7 @@ function resetForm() {
   const manualDivider = document.getElementById('manualEntryDivider');
   if (igPanel) igPanel.style.display = '';
   if (manualDivider) manualDivider.style.display = '';
+  { const _me = document.getElementById('manualEntry'); if (_me) _me.open = false; }
 }
 
 function editItem(id) {
@@ -749,6 +751,7 @@ function editItem(id) {
   const manualDivider = document.getElementById('manualEntryDivider');
   if (igPanel) igPanel.style.display = 'none';
   if (manualDivider) manualDivider.style.display = 'none';
+  { const _me = document.getElementById('manualEntry'); if (_me) _me.open = true; }
   // Scroll the form into view (instant — smooth-scroll over a long page adds a
   // confusing pause). Use the form title element so the "Edit item" h2 is at the top.
   document.getElementById('formTitle').scrollIntoView({ behavior: 'auto', block: 'start' });
@@ -2806,3 +2809,21 @@ document.getElementById('posNewSaleBtn')?.addEventListener('click', posReset);
 document.getElementById('posPrintReceiptBtn')?.addEventListener('click', posPrintReceipt);
 
 checkAuth();
+
+// ===== Mobile-safe collapsible toggles (fleet rollout 2026-06-11) =====
+// Drive each <details> from JS (preventDefault + flip .open). A <summary> with
+// display:flex breaks native <details> toggling in Safari / mobile WebKit; JS
+// ownership sidesteps it. See CATALOG-STANDARDS.md.
+(function () {
+  var manualEntry = document.getElementById('manualEntry');
+  var manualSummary = document.getElementById('manualEntryDivider');
+  if (manualSummary) manualSummary.addEventListener('click', function (e) { e.preventDefault(); if (manualEntry) manualEntry.open = !manualEntry.open; });
+  var addLink = document.querySelector('.admin-nav a[href="#addForm"]');
+  if (addLink) addLink.addEventListener('click', function () { if (manualEntry) manualEntry.open = true; });
+
+  var broadcastCollapse = document.getElementById('broadcastCollapse');
+  var broadcastSummary = broadcastCollapse ? broadcastCollapse.querySelector('summary.dash-summary') : null;
+  if (broadcastSummary) broadcastSummary.addEventListener('click', function (e) { e.preventDefault(); broadcastCollapse.open = !broadcastCollapse.open; });
+  var bcLink = document.querySelector('.admin-nav a[href="#broadcastDash"]');
+  if (bcLink) bcLink.addEventListener('click', function () { if (broadcastCollapse) broadcastCollapse.open = true; });
+})();

@@ -17,7 +17,7 @@
 <meta name="theme-color" content="#0d1b2a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=pgscp3">
+<link rel="stylesheet" href="styles.css?v=c20260611">
 <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeDBFwpAAAAAJe8ux9-imrqZ2ueRsEtdiWoDDpX" async defer></script>
 </head>
 <body style="background:#f8f6f2;">
@@ -191,7 +191,8 @@
 
   <!-- ====== WHATSAPP BROADCAST ====== -->
   <section class="dash" id="broadcastDash">
-    <h2 class="dash-title">WhatsApp Marketing</h2>
+    <details class="dash-collapse" id="broadcastCollapse">
+    <summary class="dash-summary"><h2 class="dash-title">WhatsApp Marketing</h2></summary>
     <div style="background:#fff7e6;border:1px solid #f0d9a8;border-left:4px solid #d99a2b;border-radius:8px;padding:12px 14px;margin:0 0 16px;font-size:13px;line-height:1.55;color:#4a3528;">
       <strong style="display:block;color:#1c1208;margin-bottom:3px;">⏳ Why this sends one message at a time</strong>
       WhatsApp bans numbers that send lots of messages too fast. Going one buyer at a time, each with a personal message, is exactly what keeps your number safe. Take it steady, don't rush it, and never use bulk-blast apps. A calm pace protects your number and your business.
@@ -230,6 +231,7 @@
       <p id="broadcastStatus" style="font-size:13px;color:var(--ink-soft);margin-top:10px;"></p>
       <div id="broadcastStepper" class="broadcast-stepper" style="display:none;margin-top:12px;"></div>
     </div>
+    </details>
   </section>
 
   <!-- ====== CLIENTS ====== -->
@@ -301,9 +303,10 @@
       <p id="igQuickStatus" class="ig-quick-status"></p>
     </div>
 
-    <div class="manual-entry-divider" id="manualEntryDivider">
-      <span>OR enter manually below</span>
-    </div>
+    <details class="manual-entry" id="manualEntry">
+    <summary class="manual-entry-divider" id="manualEntryDivider">
+      <span class="me-row"><span class="me-pill"><svg class="me-plus" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add an item manually</span></span>
+    </summary>
 
     <div class="field">
       <label>Main image</label>
@@ -444,6 +447,7 @@
       <button class="btn-admin primary" id="saveBtn">Save item</button>
       <button class="btn-admin" id="cancelBtn" style="display:none;">Cancel edit</button>
     </div>
+    </details>
   </div>
 
   <!-- ====== ITEM LIST ====== -->
@@ -782,6 +786,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=pgsmpesa"></script>
+<script src="admin.js?v=c20260611"></script>
 </body>
 </html>

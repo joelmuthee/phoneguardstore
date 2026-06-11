@@ -1465,3 +1465,37 @@ html { scroll-behavior: smooth; }
 .btn-paid-none.active::before { background: #fff; box-shadow: inset 0 0 0 3px #b3301f; }
 .clients-controls #owedSearch { flex: 1; min-width: 180px; padding: 10px 14px; border: 1px solid var(--line, #e6dcc8); border-radius: 10px; font-size: 14px; background: #fff; }
 .clients-controls #owedSearch:focus { outline: none; border-color: var(--gold, #a88847); }
+
+
+/* ===== Collapsible admin sections (mobile-safe) — fleet rollout 2026-06-11 =====
+   Manual add-item form + WhatsApp Marketing collapse into native <details>.
+   CRITICAL: a <summary> with display:flex breaks native <details> toggling in
+   Safari / mobile WebKit, so summaries stay display:block (flex on inner .me-row)
+   AND the toggles are JS-driven (preventDefault + flip .open) — see admin.js. */
+.manual-entry { margin: 14px 0 0; }
+summary.manual-entry-divider { display: block; list-style: none; cursor: pointer; user-select: none; margin: 10px 0; }
+summary.manual-entry-divider::-webkit-details-marker { display: none; }
+summary.manual-entry-divider::marker { content: ""; }
+.manual-entry .me-row { display: flex; align-items: center; gap: 12px; }
+.manual-entry .me-row::before, .manual-entry .me-row::after { content: ""; flex: 1; height: 1px; background: var(--line, #e5e0d5); }
+.manual-entry .me-pill {
+  display: inline-flex; align-items: center; gap: 9px; white-space: nowrap;
+  background: var(--gold); color: #2a1d00;
+  padding: 12px 24px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.16);
+  transition: transform 0.18s, box-shadow 0.18s, filter 0.18s;
+}
+.manual-entry .me-plus { transition: transform 0.2s ease; }
+.manual-entry[open] .me-plus { transform: rotate(45deg); }
+summary.manual-entry-divider:hover .me-pill { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(0,0,0,0.22); filter: brightness(0.96); }
+summary.manual-entry-divider:active .me-pill { transform: translateY(0); }
+
+.dash-collapse { margin: 0; }
+summary.dash-summary { display: block; list-style: none; cursor: pointer; user-select: none; position: relative; }
+summary.dash-summary::-webkit-details-marker { display: none; }
+summary.dash-summary::marker { content: ""; }
+summary.dash-summary .dash-title { margin-bottom: 0; padding-right: 28px; }
+.dash-collapse[open] summary.dash-summary .dash-title { margin-bottom: 18px; }
+summary.dash-summary::after { content: "\203A"; position: absolute; right: 2px; top: 6px; font-size: 24px; line-height: 1; color: var(--gold-deep, var(--gold)); transform: rotate(90deg); transition: transform 0.18s ease; }
+.dash-collapse[open] summary.dash-summary::after { transform: rotate(-90deg); }
