@@ -862,7 +862,7 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
       + '<div class="pg-rule"></div>'
       + '<h1 class="pg-head">This shop is paused</h1>'
       + '<p class="pg-body">Not ready for a monthly plan? You don\'t need one.</p>'
-      + '<p class="pg-offer">Now you can <b>own this shop outright for a one-time Ksh 20,000</b>, no monthly fees. New stock you post on Instagram pulls straight into your shop. WhatsApp ordering, plus category and size filtering, so buyers find what they want fast.</p>'
+      + '<p class="pg-offer">Now you can <b>own this shop outright for a one-time Ksh 20,000</b>, no monthly fees. New stock you post on Instagram pulls straight into your shop. Buyers order on WhatsApp, and can filter by category and size to find what they want fast.</p>'
       + '<a class="pg-ig" href="' + waLink + '" target="_blank" rel="noopener">' + WA_SVG + ' Bring my shop back</a>'
     );
     document.body.appendChild(o);
