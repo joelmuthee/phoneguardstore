@@ -358,6 +358,12 @@ img { max-width: 100%; display: block; }
 .modal-close:hover { background: var(--surface); color: var(--ink); }
 
 /* Wishlist rows */
+.multi-enquire-hint {
+  margin: 2px auto 18px; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft, #555);
+  background: var(--surface, #f5f5f5); border: 1px solid var(--line, #e3e3e3);
+  border-radius: 14px; padding: 10px 18px; text-align: center; max-width: 620px;
+}
+.multi-enquire-hint .meh-heart { color: var(--gold, #c8a13a); font-weight: 700; }
 .wl-body { max-height: 60vh; overflow-y: auto; }
 .wl-row {
   display: flex; gap: 12px; align-items: center;
