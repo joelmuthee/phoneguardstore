@@ -391,6 +391,9 @@ img { max-width: 100%; display: block; }
 .wl-row-body { flex: 1; min-width: 0; }
 .wl-row-name { font-family: var(--serif); font-size: 16px; font-weight: 600; }
 .wl-row-meta { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+/* Per-item size picker in the picked-list — capture the size before enquiring */
+.wl-size-select { margin-top: 7px; font: inherit; font-size: 13px; padding: 6px 8px; width: auto; max-width: 100%; border: 1px solid var(--line, #e3e3e3); border-radius: 8px; background: var(--surface, #fff); color: var(--ink); cursor: pointer; }
+.wl-size-select.needs-size { border-color: #d64545; box-shadow: 0 0 0 2px rgba(214,69,69,0.18); }
 .wl-remove {
   background: none; border: none; color: var(--ink-faint); font-size: 22px;
   cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 50%;

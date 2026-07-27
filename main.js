@@ -722,16 +722,22 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
     if (!items_saved.length) {
       body.innerHTML = '<p style="text-align:center;color:var(--ink-faint);padding:24px 0;">No saved items yet. Tap the heart on any item to save it for later.</p>';
     } else {
-      body.innerHTML = items_saved.map(i => `
+      body.innerHTML = items_saved.map(i => {
+        const sizes = availSizes(i);
+        const picker = sizes.length > 1
+          ? `<select class="wl-size-select" data-size-for="${escapeHtml(i.id)}" aria-label="Choose size for ${escapeHtml(i.name)}"><option value="">Choose size…</option>${sizes.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}</select>`
+          : '';
+        return `
         <div class="wl-row">
           <img src="${i.image}?${IMG_VERSION}" alt="${escapeHtml(i.name)}">
           <div class="wl-row-body">
             <div class="wl-row-name">${escapeHtml(i.name)}</div>
             <div class="wl-row-meta">${i.price > 0 ? fmtPrice(i.price) : 'Price on request'}${i.category ? ' · ' + escapeHtml(i.category) : ''}</div>
+            ${picker}
           </div>
           <button class="wl-remove" data-remove="${escapeHtml(i.id)}" aria-label="Remove">×</button>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     }
     document.getElementById('wishlistEnquireAll').style.display = items_saved.length ? 'inline-flex' : 'none';
     modal.classList.add('open');
@@ -749,16 +755,36 @@ const API_BASE = 'https://phoneguardstore-api.stawisystems.workers.dev';
     const rm = e.target.closest('[data-remove]');
     if (rm) { wishlist.delete(rm.dataset.remove); saveWishlist(); openWishlist(); render(); }
   });
+  document.getElementById('wishlistModal')?.addEventListener('change', e => {
+    if (e.target.classList.contains('wl-size-select')) e.target.classList.remove('needs-size');
+  });
   document.getElementById('wishlistEnquireAll')?.addEventListener('click', e => {
     e.preventDefault();
     const items_saved = items.filter(i => wishlist.has(i.id));
     if (!items_saved.length) return;
     const phone = settings.whatsappNumber || '254112440060';
     // Each item carries its /p/<id> share link so the shop can open the exact item.
+    // Capture a size per item; require a pick for multi-size items (same rule as
+    // the single-item enquiry) so the shop gets the exact size up front.
+    const chosen = {}; const missing = [];
+    items_saved.forEach(i => {
+      const sizes = availSizes(i);
+      if (sizes.length > 1) {
+        const sel = document.querySelector(`.wl-size-select[data-size-for="${i.id}"]`);
+        if (sel && sel.value) chosen[i.id] = sel.value; else missing.push(sel);
+      } else if (sizes.length === 1) chosen[i.id] = sizes[0];
+    });
+    if (missing.length) {
+      missing.forEach(s => s && s.classList.add('needs-size'));
+      missing[0]?.scrollIntoView({ block: 'center' });
+      showToast('Pick a size for the highlighted items first.');
+      return;
+    }
     const lines = items_saved.map((i, idx) => {
+      const size = chosen[i.id] ? ` (${chosen[i.id]})` : '';
       const price = i.price > 0 ? ' (' + fmtPrice(i.price) + ')' : '';
       const link = i.id ? `\n${API_BASE}/p/${encodeURIComponent(i.id)}` : '';
-      return `${idx + 1}. *${i.name}*${price}${link}`;
+      return `${idx + 1}. *${i.name}*${size}${price}${link}`;
     });
     const msg = `Hi Phone Guard Store! I'd like to check availability of these saved items:\n\n${lines.join('\n\n')}\n\nAre they available?`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
