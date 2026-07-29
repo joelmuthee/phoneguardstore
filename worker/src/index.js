@@ -34,9 +34,26 @@ const isMaster = (req, env) => {
 // store can be maintained while suspended. Returns a 403 Response when the caller
 // is blocked, or null when the write may proceed. Authoritative gate: the admin
 // UI also blocks these, but this is the real lock the owner can't bypass.
+// Two orthogonal KV keys drive the pause. One says WHO the shop belongs to, the
+// other is how hard we are squeezing.
+//
+//   suspended    PAUSE LEVEL — "0"/absent = active
+//                  "1"     FULL pause: public storefront goes offline.
+//                  "admin" PARTIAL pause: storefront stays 100% live, buyers see
+//                          nothing, only the owner's admin is frozen.
+//   suspend_mode WHO the shop is (sticky, survives a restore so it only has to be
+//                set once) — "prospect" (default) or "client". Controls the
+//                OVERLAY COPY on a full pause: a prospect gets the one-off
+//                win-back pitch, a client gets neutral "temporarily offline"
+//                wording with no mention of billing.
+//
+// Admin WRITES are frozen at BOTH levels — that is the actual leverage. The level
+// only decides whether her buyers are affected.
+const SUSPEND_LEVELS = ["1", "admin"];
 const suspendBlock = async (req, env) => {
   if (isMaster(req, env)) return null;
-  if ((await env.BAGS.get("suspended")) === "1") {
+  const s = await env.BAGS.get("suspended");
+  if (SUSPEND_LEVELS.includes(s)) {
     return json({ error: "account suspended; contact billing to restore the store" }, 403);
   }
   return null;
@@ -581,7 +598,13 @@ export default {
       const data = raw ? JSON.parse(raw) : { bags: [], settings: {} };
       // Billing kill-switch: stored in its own KV key so the owner's admin
       // publishes (which only write "data") can never clear it.
-      data.suspended = (await env.BAGS.get("suspended")) === "1";
+      // `suspended` is true in BOTH paused states (so the admin write-locks either
+      // way); `suspendLevel` tells the PUBLIC site whether to go dark ("full") or
+      // stay live ("admin"). Absent when active.
+      const _sus = await env.BAGS.get("suspended");
+      data.suspended = SUSPEND_LEVELS.includes(_sus);
+      data.suspendLevel = _sus === "admin" ? "admin" : (_sus === "1" ? "full" : null);
+      data.suspend_mode = (await env.BAGS.get("suspend_mode")) || "prospect";
       // PRIVACY: strip buyer PII (sales[].buyerName/buyerPhone/notes, soldTo) for
       // unauthed callers. The storefront only reads sold/price/salePrice/sales.length,
       // never buyer details. The admin sends a Bearer token and gets the full data.
@@ -606,13 +629,23 @@ export default {
     }
 
     // Billing only: flip the suspend flag. Authed by MASTER_TOKEN (not the shop admin token).
+    // body.mode  ("client"|"prospect") — WHO the shop is. Stored in its own key
+    //   ONLY when present, so a bare {suspended:false} restore never wipes it.
+    // body.level ("admin"|"full") — how hard. "admin" keeps the storefront live
+    //   and freezes only the admin; default "full" takes the shop offline.
+    //   `mode:"admin"` is also accepted as a level for callers written against
+    //   the earlier shape.
     if (request.method === "POST" && path === "/api/suspend") {
       if (!isMaster(request, env)) return json({ error: "unauthorized" }, 401);
       let body;
       try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
+      if (body.mode === "client" || body.mode === "prospect") await env.BAGS.put("suspend_mode", body.mode);
       const suspended = !!body.suspended;
-      await env.BAGS.put("suspended", suspended ? "1" : "0");
-      return json({ ok: true, suspended });
+      const adminOnly = body.level === "admin" || body.mode === "admin";
+      const val = suspended ? (adminOnly ? "admin" : "1") : "0";
+      await env.BAGS.put("suspended", val);
+      const mode = (await env.BAGS.get("suspend_mode")) || "prospect";
+      return json({ ok: true, suspended, level: suspended ? (adminOnly ? "admin" : "full") : null, mode });
     }
 
     // Public: serve images
@@ -1180,6 +1213,9 @@ export default {
       const existingRaw = await env.BAGS.get("data");
       const data = existingRaw ? JSON.parse(existingRaw) : { bags: [], settings: {} };
       const existingIds = new Set(data.bags.map(b => b.id));
+      const existingIgUrls = new Set(data.bags.map(b => b.instagramUrl).filter(Boolean));
+      const ledgerRaw = await env.BAGS.get("ig_synced_codes");
+      const syncedCodes = new Set(ledgerRaw ? JSON.parse(ledgerRaw) : []);
 
       const added = [];
       const errors = [];
@@ -1187,7 +1223,8 @@ export default {
 
       for (const it of items) {
         const id = `ig_${it.shortcode}`;
-        if (existingIds.has(id)) { errors.push({ shortcode: it.shortcode, reason: "already in catalog" }); continue; }
+        const igUrl = `https://www.instagram.com/p/${it.shortcode}/`;
+        if (existingIds.has(id) || syncedCodes.has(it.shortcode) || existingIgUrls.has(igUrl)) { errors.push({ shortcode: it.shortcode, reason: "already synced" }); continue; }
         const urls = (it.imageUrls || []).slice(0, 4);
         if (!urls.length) { errors.push({ shortcode: it.shortcode, reason: "no images" }); continue; }
         const uploaded = [];
@@ -1241,6 +1278,8 @@ export default {
       // Newest first — prepend to the catalog
       data.bags = newBags.concat(data.bags);
       await env.BAGS.put("data", JSON.stringify(data));
+      for (const it of items) syncedCodes.add(it.shortcode);
+      await env.BAGS.put("ig_synced_codes", JSON.stringify([...syncedCodes]));
       return json({ ok: true, added: added.length, errors, items: added });
     }
 
